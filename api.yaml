@@ -1,0 +1,668 @@
+openapi: 3.0.0
+info:
+  title: Enable Code API - Complete Specification
+  version: 1.0.0
+  description: >
+    Complete API endpoints for User Authentication, Lessons, User Progress,
+    and Custom Blocks for the Enable Code platform.
+    This version includes suggested additional endpoints (like deleting users, getting user stats) 
+    to make the API more robust.
+servers:
+  - url: http://localhost:5000
+    description: Local Development Server
+
+paths:
+  # ========================================
+  # AUTHENTICATION
+  # ========================================
+  /api/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Creates a new user account in the database.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: User successfully registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Bad request (e.g., email already exists)
+
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User Login
+      description: Authenticates a user and returns a JWT token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Successfully authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Unauthorized (Invalid email or password)
+
+  # ========================================
+  # USERS & PROFILE
+  # ========================================
+  /api/users/profile:
+    get:
+      tags:
+        - Users
+      summary: Get user profile
+      description: Retrieves the profile data of the currently authenticated user.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+    put:
+      tags:
+        - Users
+      summary: Update user profile
+      description: Updates basic profile information like name and avatar.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+    delete:
+      tags:
+        - Users
+      summary: Delete user account
+      description: (Added Suggestion) Deletes the currently authenticated user's account and associated data.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Account deleted successfully
+        '401':
+          description: Unauthorized
+
+  /api/users/stats:
+    get:
+      tags:
+        - Users
+      summary: Get user statistics
+      description: (Added Suggestion) Retrieves aggregated stats for the user (total score, streak, lessons completed).
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: User statistics retrieved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  total_score:
+                    type: integer
+                  streak:
+                    type: integer
+                  lessons_completed:
+                    type: integer
+                  level:
+                    type: integer
+        '401':
+          description: Unauthorized
+
+  /api/users/calibration:
+    put:
+      tags:
+        - Users
+      summary: Recalibrate AI settings
+      description: Updates the user's specific facial/gesture calibration settings.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CalibrationRequest'
+      responses:
+        '200':
+          description: Calibration settings updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+
+  # ========================================
+  # LESSONS
+  # ========================================
+  /api/lessons:
+    get:
+      tags:
+        - Lessons
+      summary: Get all lessons
+      description: Retrieves a list of all available lessons, optionally filtered by difficulty or active status.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: difficulty
+          schema:
+            type: string
+          description: Filter lessons by difficulty (e.g., Easy, Medium, Hard)
+      responses:
+        '200':
+          description: A list of lessons
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Lesson'
+        '401':
+          description: Unauthorized
+
+  /api/lessons/{lessonId}:
+    get:
+      tags:
+        - Lessons
+      summary: Get a specific lesson
+      description: Retrieves details of a lesson by its ID.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: lessonId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Lesson details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Lesson'
+        '404':
+          description: Lesson not found
+
+  /api/lessons/{lessonId}/submit:
+    post:
+      tags:
+        - Lessons
+      summary: Submit lesson code
+      description: Submits the user's workspace code for execution and grading against test cases. Updates UserProgress.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: lessonId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubmitLessonRequest'
+      responses:
+        '200':
+          description: Lesson graded and progress updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProgress'
+        '400':
+          description: Invalid submission data
+
+  /api/lessons/{lessonId}/save-progress:
+    post:
+      tags:
+        - Lessons
+      summary: Save workspace progress
+      description: Saves the state of the user's workspace blocks without grading, allowing them to resume later.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: lessonId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaveProgressRequest'
+      responses:
+        '200':
+          description: Progress saved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProgress'
+
+  # ========================================
+  # USER PROGRESS
+  # ========================================
+  /api/progress:
+    get:
+      tags:
+        - Progress
+      summary: Get all user progress
+      description: (Added Suggestion) Retrieves all progress records for the authenticated user.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: A list of user progress records
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserProgress'
+        '401':
+          description: Unauthorized
+
+  /api/progress/{lessonId}:
+    get:
+      tags:
+        - Progress
+      summary: Get progress for a specific lesson
+      description: (Added Suggestion) Retrieves the user's progress for a specific lesson ID.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: lessonId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Progress retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProgress'
+        '404':
+          description: Progress not found
+
+  # ========================================
+  # CUSTOM BLOCKS
+  # ========================================
+  /api/custom-blocks:
+    get:
+      tags:
+        - Custom Blocks
+      summary: Get all custom blocks
+      description: Loads the definitions and Python generator code for custom Blockly blocks from the database.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: category
+          schema:
+            type: string
+          description: Filter blocks by category
+      responses:
+        '200':
+          description: Custom blocks loaded
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CustomBlock'
+
+  /api/custom-blocks/{blockId}:
+    get:
+      tags:
+        - Custom Blocks
+      summary: Get a specific custom block
+      description: (Added Suggestion) Retrieves details for a specific custom block.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: blockId
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Custom block details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomBlock'
+        '404':
+          description: Custom block not found
+
+  # ========================================
+  # LEADERBOARD
+  # ========================================
+  /api/leaderboard:
+    get:
+      tags:
+        - Leaderboard
+      summary: Get user leaderboard
+      description: Retrieves a ranking of users based on their total score.
+      parameters:
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: Number of users to return
+      responses:
+        '200':
+          description: Leaderboard ranking
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    user_id:
+                      type: string
+                    name:
+                      type: string
+                    avatar:
+                      type: string
+                    total_score:
+                      type: integer
+                    lessons_completed:
+                      type: integer
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # ----------------------------------------
+    # Core Data Schemas
+    # ----------------------------------------
+    User:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "60d5ecb8b392d700153f3a45"
+        email:
+          type: string
+          format: email
+          example: "user@example.com"
+        role:
+          type: string
+          example: "student"
+        name:
+          type: string
+          example: "Nguyen Van A"
+        avatar:
+          type: string
+          example: "https://example.com/avatar.jpg"
+        calibration_is_calibrated:
+          type: boolean
+          example: true
+        calibration_settings:
+          type: object
+          example: { "x_threshold": 0.5, "y_threshold": 0.3 }
+        total_score:
+          type: integer
+          example: 1200
+        lessons_completed:
+          type: integer
+          example: 5
+        streak:
+          type: integer
+          example: 3
+        level:
+          type: integer
+          example: 2
+        point:
+          type: integer
+          example: 450
+        last_active_date:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+
+    Lesson:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "60d5ecb8b392d700153f3a55"
+        title:
+          type: string
+          example: "Introduction to Loops"
+        description:
+          type: string
+          example: "Learn how to use for and while loops."
+        order:
+          type: integer
+          example: 1
+        difficulty:
+          type: string
+          example: "Easy"
+        theory:
+          type: string
+          description: "HTML content for the lesson theory"
+        problem_statement:
+          type: string
+          example: "Make the robot move forward 5 times."
+        toolbox_config:
+          type: object
+          description: "JSON configuration for Blockly toolbox"
+        initial_blocks:
+          type: object
+          description: "Starting blocks for the workspace"
+        public_testcases:
+          type: array
+          items:
+            type: object
+        hidden_testcases:
+          type: array
+          items:
+            type: object
+        req_level:
+          type: integer
+          example: 1
+        base_xp:
+          type: integer
+          example: 100
+        duration:
+          type: integer
+          example: 15
+        is_active:
+          type: boolean
+          example: true
+
+    UserProgress:
+      type: object
+      properties:
+        _id:
+          type: string
+        user_id:
+          type: string
+        lesson_id:
+          type: string
+        status:
+          type: string
+          example: "completed"
+        accuracy:
+          type: number
+          format: float
+          example: 95.5
+        errors:
+          type: integer
+          example: 2
+        attempts_count:
+          type: integer
+          example: 3
+        workspace_state:
+          type: string
+          description: "Serialized JSON of the Blockly workspace"
+        time:
+          type: integer
+          description: "Time taken in seconds"
+          example: 300
+        points:
+          type: integer
+          example: 85
+        submitted_at:
+          type: string
+          format: date-time
+
+    CustomBlock:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "60d5ecb8b392d700153f3a66"
+        block_type:
+          type: string
+          example: "move_forward"
+        definition:
+          type: object
+          description: "Blockly block definition JSON"
+        generator_code:
+          type: string
+          example: "Blockly.Python['move_forward'] = function(block) { ... }"
+        category:
+          type: string
+          example: "Movement"
+
+    # ----------------------------------------
+    # Request Shapes
+    # ----------------------------------------
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+        name:
+          type: string
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          format: password
+
+    AuthResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        user:
+          $ref: '#/components/schemas/User'
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        avatar:
+          type: string
+
+    CalibrationRequest:
+      type: object
+      required:
+        - calibration_settings
+      properties:
+        calibration_is_calibrated:
+          type: boolean
+          example: true
+        calibration_settings:
+          type: object
+          description: Dynamic JSON object representing facial/gesture limits.
+          example: 
+            sensitivity: 0.8
+            neutral_face_baseline: [120, 240]
+
+    SubmitLessonRequest:
+      type: object
+      required:
+        - workspace_state
+      properties:
+        workspace_state:s
+          type: string
+        time_taken:
+          type: integer
+          example: 120
+        errors:
+          type: integer
+          example: 0
+        accuracy:
+          type: number
+          example: 100
+
+    SaveProgressRequest:
+      type: object
+      required:
+        - workspace_state
+      properties:
+        workspace_state:
+          type: strings
