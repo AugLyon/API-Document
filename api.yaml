@@ -164,36 +164,53 @@ paths:
                 $ref: '#/components/schemas/User'
         '401':
           description: Unauthorized
-
   # ========================================
-  # LESSONS
+  # TOPICS
   # ========================================
-  /api/lessons:
+  /api/topics:
     get:
       tags:
-        - Lessons
-      summary: Get all lessons
-      description: Retrieves a list of all available lessons, optionally filtered by difficulty or active status.
+        - Topics
+      summary: Get all topics
+      description: Retrieves a list of all educational topics.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: A list of topics
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Topic'
+
+  /api/topics/{topicId}/lessons:
+    get:
+      tags:
+        - Topics
+      summary: Get lessons by topic
+      description: Retrieves all lessons belonging to a specific topic.
       security:
         - bearerAuth: []
       parameters:
-        - in: query
-          name: difficulty
+        - in: path
+          name: topicId
+          required: true
           schema:
             type: string
-          description: Filter lessons by difficulty (e.g., Easy, Medium, Hard)
       responses:
         '200':
-          description: A list of lessons
+          description: A list of lessons for the topic
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/Lesson'
-        '401':
-          description: Unauthorized
-
+  # ========================================
+  # LESSONS
+  # ========================================
   /api/lessons/{lessonId}:
     get:
       tags:
@@ -574,7 +591,29 @@ components:
         category:
           type: string
           example: "Movement"
-
+    Topic:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "60d5ecb8b392d700153f3a77"
+        title:
+          type: string
+          example: "Loops and Iteration"
+        description:
+          type: string
+          example: "Mastering the power of repeating code blocks."
+        difficulty:
+          type: string
+          enum: ["SSS", "SS", "S", "A", "B", "C", "D", "F"]
+        relevant_topic_ids:
+          type: array
+          items:
+            type: string
+          example: ["60d5ecb8b392d700153f3a78"]
+        is_active:
+          type: boolean
+          example: true
     # ----------------------------------------
     # Request Shapes
     # ----------------------------------------
@@ -647,7 +686,7 @@ components:
       required:
         - workspace_state
       properties:
-        workspace_state:s
+        workspace_state:
           type: string
         time_taken:
           type: integer
