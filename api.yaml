@@ -560,7 +560,7 @@ components:
           type: integer
           example: 3
         workspace_state:
-          type: string
+          type: object
           description: "Serialized JSON of the Blockly workspace"
         time:
           type: integer
@@ -687,7 +687,7 @@ components:
         - workspace_state
       properties:
         workspace_state:
-          type: string
+          type: object
         time_taken:
           type: integer
           example: 120
@@ -704,4 +704,4 @@ components:
         - workspace_state
       properties:
         workspace_state:
-          type: strings
+          type: object
