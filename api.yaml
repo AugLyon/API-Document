@@ -790,7 +790,6 @@ components:
           type: string
           enum: [SSS, SS, S, A, B, C, D, F]
           example: "B"
-          example: "<p>A loop repeats a block of code...</p>"
         problem_statement:
           type: string
           example: "Make the robot move forward exactly 5 times."
@@ -954,7 +953,6 @@ components:
           type: string
           description: "URL to the user's avatar image"
           example: "https://example.com/avatar.jpg"
-          example: false
         calibration_settings:
           type: object
           description: "Initial facial/gesture calibration settings"
