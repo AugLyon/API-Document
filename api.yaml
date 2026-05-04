@@ -1,12 +1,11 @@
 openapi: 3.0.0
 info:
   title: Enable Code API - Complete Specification
-  version: 1.0.0
+  version: 1.1.0
   description: >
     Complete API endpoints for User Authentication, Lessons, User Progress,
-    and Custom Blocks for the Enable Code platform.
-    This version includes suggested additional endpoints (like deleting users, getting user stats) 
-    to make the API more robust.
+    Custom Blocks, and Calibrations for the Enable Code platform.
+    Designed for users with hand disabilities to learn Python via facial gestures.
 servers:
   - url: http://localhost:5000
     description: Local Development Server
@@ -105,7 +104,7 @@ paths:
       tags:
         - Users
       summary: Delete user account
-      description: (Added Suggestion) Deletes the currently authenticated user's account and associated data.
+      description: Deletes the currently authenticated user's account and associated data.
       security:
         - bearerAuth: []
       responses:
@@ -119,7 +118,7 @@ paths:
       tags:
         - Users
       summary: Get user statistics
-      description: (Added Suggestion) Retrieves aggregated stats for the user (total score, streak, lessons completed).
+      description: Retrieves aggregated stats for the user (total score, streak, lessons completed).
       security:
         - bearerAuth: []
       responses:
@@ -132,21 +131,45 @@ paths:
                 properties:
                   total_score:
                     type: integer
+                    description: "Total points accumulated across all lessons"
+                    example: 2450
                   streak:
                     type: integer
+                    description: "Number of consecutive days the user has been active"
+                    example: 7
                   lessons_completed:
                     type: integer
+                    description: "Total number of lessons successfully passed"
+                    example: 12
                   level:
                     type: integer
+                    description: "Current gamified level of the user based on XP"
+                    example: 5
         '401':
           description: Unauthorized
 
   /api/users/calibration:
+    get:
+      tags:
+        - Users
+      summary: Get user calibration settings
+      description: Retrieves the user's specific facial boundary and preference calibration from the calibrations table.
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Calibration data retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Calibration'
+        '404':
+          description: Calibration data not found
     put:
       tags:
         - Users
       summary: Recalibrate AI settings
-      description: Updates the user's specific facial/gesture calibration settings.
+      description: Updates the user's specific facial/gesture calibration settings in the calibrations table.
       security:
         - bearerAuth: []
       requestBody:
@@ -161,9 +184,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
+                $ref: '#/components/schemas/Calibration'
         '401':
           description: Unauthorized
+
   # ========================================
   # TOPICS
   # ========================================
@@ -199,6 +223,7 @@ paths:
           required: true
           schema:
             type: string
+          example: "60d5ecb8b392d700153f3a77"
       responses:
         '200':
           description: A list of lessons for the topic
@@ -208,6 +233,7 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Lesson'
+
   # ========================================
   # LESSONS
   # ========================================
@@ -216,10 +242,7 @@ paths:
       tags:
         - Lessons
       summary: Get all lessons
-      description: >
-        Retrieves a paginated list of all lessons. Supports filtering by topic,
-        difficulty, active status, and required level. Admin/teacher can see
-        inactive lessons; students only see active ones.
+      description: Retrieves a paginated list of all lessons. Supports filtering.
       security:
         - bearerAuth: []
       parameters:
@@ -263,12 +286,15 @@ paths:
                       $ref: '#/components/schemas/Lesson'
                   total:
                     type: integer
+                    description: "Total number of lessons matching criteria"
                     example: 42
                   page:
                     type: integer
+                    description: "Current page number"
                     example: 1
                   limit:
                     type: integer
+                    description: "Items per page"
                     example: 20
         '401':
           description: Unauthorized
@@ -303,10 +329,7 @@ paths:
       tags:
         - Lessons
       summary: Get a specific lesson
-      description: >
-        Retrieves the full details of a lesson by its ID including theory,
-        problem statement, toolbox config, initial blocks, and public test cases.
-        Hidden test cases are excluded from this response.
+      description: Retrieves the full details of a lesson by its ID including public test cases and block configurations.
       security:
         - bearerAuth: []
       parameters:
@@ -325,8 +348,6 @@ paths:
                 $ref: '#/components/schemas/Lesson'
         '401':
           description: Unauthorized
-        '403':
-          description: Forbidden — lesson level requirement not met
         '404':
           description: Lesson not found
 
@@ -334,9 +355,7 @@ paths:
       tags:
         - Lessons
       summary: Update a lesson
-      description: >
-        Updates any field of an existing lesson. Restricted to admin and teacher roles.
-        Partial updates are supported — only send fields that need to change.
+      description: Updates any field of an existing lesson. Restricted to admin and teacher roles.
       security:
         - bearerAuth: []
       parameters:
@@ -358,10 +377,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Lesson'
-        '400':
-          description: Validation error
         '403':
-          description: Forbidden — insufficient role
+          description: Forbidden
         '404':
           description: Lesson not found
 
@@ -369,9 +386,7 @@ paths:
       tags:
         - Lessons
       summary: Delete a lesson
-      description: >
-        Permanently deletes a lesson and all associated user progress records.
-        Restricted to admin role only.
+      description: Permanently deletes a lesson and all associated user progress records.
       security:
         - bearerAuth: []
       parameters:
@@ -383,33 +398,15 @@ paths:
       responses:
         '200':
           description: Lesson deleted successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                    example: true
-                  message:
-                    type: string
-                    example: "Lesson deleted successfully"
         '403':
-          description: Forbidden — admin only
-        '404':
-          description: Lesson not found
+          description: Forbidden
 
   /api/lessons/{lessonId}/submit:
     post:
       tags:
         - Lessons
       summary: Submit lesson workspace
-      description: >
-        Submits the user's final Blockly workspace for grading. The backend
-        executes the generated code against hidden test cases, computes accuracy,
-        awards XP/points based on base_xp and performance, updates UserProgress
-        status to "completed", and updates the user's total_score, streak, and
-        lessons_completed counters.
+      description: Submits the user's final Blockly workspace for grading. The backend executes the generated code via Piston against hidden test cases. Updates UserProgress.
       security:
         - bearerAuth: []
       parameters:
@@ -432,9 +429,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/SubmitLessonResponse'
         '400':
-          description: Invalid workspace state or missing required fields
-        '401':
-          description: Unauthorized
+          description: Invalid workspace state
         '404':
           description: Lesson not found
 
@@ -443,10 +438,7 @@ paths:
       tags:
         - Lessons
       summary: Save workspace progress (draft)
-      description: >
-        Autosaves the current state of the user's Blockly workspace without
-        grading. Creates or updates a UserProgress record with status "in_progress".
-        Used for resume functionality.
+      description: Autosaves the current state of the user's Blockly workspace without grading.
       security:
         - bearerAuth: []
       parameters:
@@ -468,20 +460,13 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserProgress'
-        '401':
-          description: Unauthorized
-        '404':
-          description: Lesson not found
 
   /api/lessons/{lessonId}/progress:
     get:
       tags:
         - Lessons
       summary: Get current user's progress for a lesson
-      description: >
-        Returns the authenticated user's UserProgress record for this lesson,
-        including saved workspace state (for resume), attempts count, and
-        last submission result. Returns 404 if the user has never started the lesson.
+      description: Returns the authenticated user's UserProgress record for this lesson, including saved workspace state for resuming.
       security:
         - bearerAuth: []
       parameters:
@@ -497,20 +482,15 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserProgress'
-        '401':
-          description: Unauthorized
         '404':
-          description: No progress record found for this lesson
+          description: No progress record found
 
   /api/lessons/{lessonId}/hint:
     get:
       tags:
         - Lessons
       summary: Get hints for a lesson
-      description: >
-        Returns the ordered list of hints for the lesson. Hints are progressively
-        revealed — the client should track which index the user is on and request
-        the next one as needed.
+      description: Returns the ordered list of hints for the lesson progressively.
       security:
         - bearerAuth: []
       parameters:
@@ -524,7 +504,6 @@ paths:
           schema:
             type: integer
             default: 0
-          description: Zero-based index of the hint to retrieve
       responses:
         '200':
           description: Hint returned
@@ -541,21 +520,14 @@ paths:
                     example: 3
                   hint:
                     type: object
-                    description: Hint object from the lesson's hint array
-                    example: { "text": "Try using a for loop with range(5).", "type": "text" }
-        '401':
-          description: Unauthorized
-        '404':
-          description: Lesson not found or hint index out of range
+                    example: { "text": "Use the mouth_open gesture to drag the block.", "type": "text" }
 
   /api/lessons/{lessonId}/toggle-active:
     patch:
       tags:
         - Lessons
       summary: Toggle lesson active status
-      description: >
-        Flips the is_active flag on a lesson. Inactive lessons are hidden from
-        students but visible to admin/teacher. Restricted to admin and teacher roles.
+      description: Flips the is_active flag on a lesson.
       security:
         - bearerAuth: []
       parameters:
@@ -567,20 +539,6 @@ paths:
       responses:
         '200':
           description: Active status toggled
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  _id:
-                    type: string
-                  is_active:
-                    type: boolean
-                    example: false
-        '403':
-          description: Forbidden — admin/teacher only
-        '404':
-          description: Lesson not found
 
   # ========================================
   # USER PROGRESS
@@ -590,7 +548,7 @@ paths:
       tags:
         - Progress
       summary: Get all user progress
-      description: (Added Suggestion) Retrieves all progress records for the authenticated user.
+      description: Retrieves all progress records for the authenticated user across all lessons.
       security:
         - bearerAuth: []
       responses:
@@ -602,15 +560,13 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/UserProgress'
-        '401':
-          description: Unauthorized
 
   /api/progress/{lessonId}:
     get:
       tags:
         - Progress
       summary: Get progress for a specific lesson
-      description: (Added Suggestion) Retrieves the user's progress for a specific lesson ID.
+      description: Retrieves the user's progress for a specific lesson ID.
       security:
         - bearerAuth: []
       parameters:
@@ -626,8 +582,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/UserProgress'
-        '404':
-          description: Progress not found
 
   # ========================================
   # CUSTOM BLOCKS
@@ -645,7 +599,7 @@ paths:
           name: category
           schema:
             type: string
-          description: Filter blocks by category
+          description: Filter blocks by category (e.g., "Movement", "Logic")
       responses:
         '200':
           description: Custom blocks loaded
@@ -661,7 +615,7 @@ paths:
       tags:
         - Custom Blocks
       summary: Get a specific custom block
-      description: (Added Suggestion) Retrieves details for a specific custom block.
+      description: Retrieves details for a specific custom block definition.
       security:
         - bearerAuth: []
       parameters:
@@ -677,8 +631,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/CustomBlock'
-        '404':
-          description: Custom block not found
 
   # ========================================
   # LEADERBOARD
@@ -695,7 +647,6 @@ paths:
           schema:
             type: integer
             default: 10
-          description: Number of users to return
       responses:
         '200':
           description: Leaderboard ranking
@@ -708,14 +659,19 @@ paths:
                   properties:
                     user_id:
                       type: string
+                      example: "60d5ecb8b392d700153f3a45"
                     name:
                       type: string
+                      example: "Nguyen Van A"
                     avatar:
                       type: string
+                      example: "https://enablecode.vn/avatars/user.jpg"
                     total_score:
                       type: integer
+                      example: 2450
                     lessons_completed:
                       type: integer
+                      example: 12
 
 components:
   securitySchemes:
@@ -730,50 +686,103 @@ components:
     # ----------------------------------------
     User:
       type: object
+      description: "Represents a registered user in the platform."
       properties:
         _id:
           type: string
+          description: "MongoDB ObjectId of the user"
           example: "60d5ecb8b392d700153f3a45"
         email:
           type: string
           format: email
-          example: "user@example.com"
+          description: "User's email address for login"
+          example: "student_handsfree@enablecode.vn"
         role:
           type: string
+          description: "Role-based access control level"
+          enum: [student, teacher, admin]
           example: "student"
         name:
           type: string
-          example: "Nguyen Van A"
+          description: "Full display name of the user"
+          example: "Nguyen Huu Tri"
         avatar:
           type: string
-          example: "https://example.com/avatar.jpg"
-        calibration_settings:
-          type: object
-          example: { "x_threshold": 0.5, "y_threshold": 0.3 }
+          description: "URL link to user profile picture"
+          example: "https://enablecode.vn/avatars/tri_nguyen.jpg"
         total_score:
           type: integer
+          description: "Total leaderboard points accumulated"
           example: 1200
         lessons_completed:
           type: integer
+          description: "Total count of lessons fully passed"
           example: 5
         streak:
           type: integer
+          description: "Consecutive daily login and coding streak"
           example: 3
         level:
           type: integer
+          description: "Gamification level based on XP/total_score"
           example: 2
         last_active_date:
           type: string
           format: date-time
+          description: "Timestamp of the user's last interaction"
+          example: "2026-05-04T10:00:00Z"
         created_at:
           type: string
           format: date-time
+          description: "Account creation timestamp"
+          example: "2026-04-01T08:30:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          description: "Last profile update timestamp"
+          example: "2026-05-01T09:15:00Z"
 
-    Lesson:
+    Calibration:
       type: object
+      description: "Stores personalized facial mapping parameters to adjust the AI tracking sensitivity based on user's actual range of motion."
       properties:
         _id:
           type: string
+          description: "Unique identifier for this calibration profile"
+          example: "65f1a2b3c4d5e6f7a8b9c0d1"
+        user_id:
+          type: string
+          description: "Reference to the User ObjectId"
+          example: "60d5ecb8b392d700153f3a45"
+        bounds:
+          type: object
+          description: "Coordinate boundaries derived from MediaPipe Face Mesh representing extreme limits of user's head movement."
+          example: 
+            pitch_max: 0.25
+            pitch_min: -0.15
+            yaw_max: 0.30
+            yaw_min: -0.30
+        preferences:
+          type: object
+          description: "Custom mapping configurations mapping facial expressions to programming actions."
+          example:
+            drag_drop_gesture: "mouth_open"
+            run_code_gesture: "double_nod"
+            cursor_smoothing: 0.8
+            camera_index: 0
+        updated_at:
+          type: string
+          format: date-time
+          description: "Timestamp of the last calibration update"
+          example: "2026-05-04T11:04:39Z"
+
+    Lesson:
+      type: object
+      description: "Represents a single learning module, including instructions, Blockly configurations, and testing logic."
+      properties:
+        _id:
+          type: string
+          description: "Unique Lesson ObjectId"
           example: "60d5ecb8b392d700153f3a55"
         topic_id:
           type: string
@@ -781,71 +790,70 @@ components:
           example: "60d5ecb8b392d700153f3a77"
         title:
           type: string
-          example: "Introduction to Loops"
+          description: "Display name of the lesson"
+          example: "Python Basics: Using Print"
         order:
           type: integer
-          description: "Display order within the topic"
+          description: "Display sequence within the topic"
           example: 1
         difficulty:
           type: string
+          description: "Tiered difficulty ranking"
           enum: [SSS, SS, S, A, B, C, D, F]
           example: "B"
         problem_statement:
           type: string
-          example: "Make the robot move forward exactly 5 times."
+          description: "Markdown string explaining the task to the student"
+          example: "Use the `print` block to output the word 'Hello World' to the Skulpt terminal."
         toolbox_config:
           type: object
-          description: "Blockly toolbox JSON — defines which blocks are available to the student"
+          description: "Blockly toolbox JSON defining which blocks are available for drag-and-drop."
           example:
             kind: "categoryToolbox"
             contents:
               - kind: "category"
-                name: "Movement"
+                name: "Text"
                 colour: "160"
         initial_blocks:
           type: object
-          description: "Pre-placed Blockly workspace XML/JSON loaded when the lesson starts"
+          description: "Pre-placed Blockly workspace JSON loaded when the lesson starts"
+          example: { "blocks": { "languageVersion": 0, "blocks": [] } }
         hint:
           type: array
-          description: "Ordered list of progressive hint objects"
+          description: "Progressive hints revealed to help the student"
           items:
             type: object
             properties:
               text:
                 type: string
-                example: "Try using a for loop with range(5)."
+                description: "The hint content"
+                example: "Look in the 'Text' category for the print block."
               type:
                 type: string
                 enum: [text, image, code]
+                description: "Format of the hint"
                 example: "text"
         solution:
           type: object
-          description: "Reference solution workspace state — only returned for admin/teacher roles"
+          description: "Reference solution workspace state (Admin/Teacher only)"
+          example: { "blocks": { "type": "text_print", "inputs": { "TEXT": "Hello World" } } }
         public_testcases:
           type: array
-          description: "Test cases visible to the student for self-checking"
+          description: "Test cases executed via Piston visible to the student for self-checking"
           items:
             type: object
             properties:
               description:
                 type: string
-                example: "Robot moves forward 5 steps"
+                description: "Human readable test intent"
+                example: "Check if output is Hello World"
               expected_output:
                 type: string
-                example: "FORWARD FORWARD FORWARD FORWARD FORWARD"
-        hidden_testcases:
-          type: array
-          description: "Test cases used for grading — never exposed to students"
-          items:
-            type: object
-            properties:
-              description:
-                type: string
-              expected_output:
-                type: string
+                description: "Exact stdout match required"
+                example: "Hello World\n"
         base_xp:
           type: integer
-          description: "Base XP awarded on first completion"
+          description: "Base experience points awarded on completion"
           example: 100
         duration:
           type: integer
@@ -853,81 +861,115 @@ components:
           example: 15
         is_active:
           type: boolean
-          description: "Controls student visibility; inactive lessons are admin/teacher-only"
+          description: "Controls student visibility; false hides it for drafting"
           example: true
 
     UserProgress:
       type: object
+      description: "Tracks an individual user's attempt and completion status for a specific lesson."
       properties:
         _id:
           type: string
+          description: "Unique Progress ObjectId"
+          example: "60d5ecb8b392d700153f3a99"
         user_id:
           type: string
+          description: "Reference to the User ObjectId"
+          example: "60d5ecb8b392d700153f3a45"
         lesson_id:
           type: string
+          description: "Reference to the Lesson ObjectId"
+          example: "60d5ecb8b392d700153f3a55"
         status:
           type: string
+          description: "Current state of the lesson progress"
+          enum: [in_progress, completed, failed]
           example: "completed"
         attempts_count:
           type: integer
+          description: "Number of times the user triggered 'Run Code' (double nod)"
           example: 3
         workspace_state:
           type: object
-          description: "Serialized JSON of the Blockly workspace"
+          description: "Serialized JSON of the student's current Blockly workspace"
+          example: { "blocks": { "type": "text_print" } }
         time:
           type: integer
-          description: "Time taken in seconds"
-          example: 300
+          description: "Time taken in seconds to complete the lesson"
+          example: 145
+        points:
+          type: integer
+          description: "Points awarded for this attempt"
+          example: 85
         submitted_at:
           type: string
           format: date-time
+          description: "Timestamp of final submission"
+          example: "2026-05-04T10:30:00Z"
 
     CustomBlock:
       type: object
+      description: "Stores custom Blockly block definitions and their corresponding Python code generators."
       properties:
         _id:
           type: string
+          description: "Unique Custom Block ObjectId"
           example: "60d5ecb8b392d700153f3a66"
         block_type:
           type: string
-          example: "move_forward"
+          description: "Internal identifier for the block"
+          example: "enablecode_move_forward"
         definition:
           type: object
-          description: "Blockly block definition JSON"
+          description: "Blockly block definition JSON mapping inputs and colors"
+          example: { "type": "enablecode_move_forward", "message0": "Move Forward", "colour": 230 }
         generator_code:
           type: string
-          example: "Blockly.Python['move_forward'] = function(block) { ... }"
+          description: "JavaScript snippet that translates the block into Python string via Skulpt"
+          example: "Blockly.Python['enablecode_move_forward'] = function(block) { return 'robot.move_forward()\\n'; };"
         category:
           type: string
+          description: "Toolbox category where this block resides"
           example: "Movement"
+
     Topic:
       type: object
+      description: "A grouping container for lessons, acting as a curriculum chapter."
       properties:
         _id:
           type: string
+          description: "Unique Topic ObjectId"
           example: "60d5ecb8b392d700153f3a77"
         title:
           type: string
-          example: "Loops and Iteration"
+          description: "Display name of the course module"
+          example: "Introduction to Python"
         description:
           type: string
-          example: "Mastering the power of repeating code blocks."
+          description: "Summary of what the student will learn"
+          example: "Learn the basics of syntax, variables, and printing output."
         difficulty:
           type: string
+          description: "Overall difficulty of the topic"
           enum: ["SSS", "SS", "S", "A", "B", "C", "D", "F"]
+          example: "C"
         relevant_topic_ids:
           type: array
+          description: "Array of related Topic ObjectIds for curriculum branching"
           items:
             type: string
           example: ["60d5ecb8b392d700153f3a78"]
         is_active:
           type: boolean
+          description: "Visibility toggle for the topic"
           example: true
+
     # ----------------------------------------
     # Request Shapes
     # ----------------------------------------
     RegisterRequest:
       type: object
+      description: "Payload required to register a new user."
       required:
         - email
         - password
@@ -937,29 +979,30 @@ components:
         email:
           type: string
           format: email
-          example: "user@example.com"
+          description: "User's email"
+          example: "newuser@enablecode.vn"
         password:
           type: string
           format: password
-          example: "StrongP@ssw0rd"
+          description: "Plain text password (hashed by backend)"
+          example: "P@ssw0rd123"
         name:
           type: string
-          example: "Nguyen Van A"
+          description: "Full display name"
+          example: "Le Thi B"
         role:
           type: string
+          description: "Requested account role"
           enum: ["student", "teacher", "admin"]
           example: "student"
         avatar:
           type: string
-          description: "URL to the user's avatar image"
-          example: "https://example.com/avatar.jpg"
-        calibration_settings:
-          type: object
-          description: "Initial facial/gesture calibration settings"
-          example: { "x_threshold": 0.5, "y_threshold": 0.3 }
+          description: "Optional URL to an avatar image"
+          example: "https://enablecode.vn/avatars/default.png"
 
     LoginRequest:
       type: object
+      description: "Credentials payload for authentication."
       required:
         - email
         - password
@@ -967,44 +1010,67 @@ components:
         email:
           type: string
           format: email
+          description: "Registered email address"
+          example: "student_handsfree@enablecode.vn"
         password:
           type: string
           format: password
+          description: "User's password"
+          example: "P@ssw0rd123"
 
     AuthResponse:
       type: object
+      description: "Response returned upon successful login/registration containing the JWT."
       properties:
         success:
           type: boolean
+          description: "Indicates operation status"
           example: true
         token:
           type: string
+          description: "JWT Bearer token for authorized routes"
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
         user:
           $ref: '#/components/schemas/User'
 
     UpdateProfileRequest:
       type: object
+      description: "Payload to update user metadata."
       properties:
         name:
           type: string
+          description: "Updated display name"
+          example: "Nguyen Huu Tri Updated"
         avatar:
           type: string
+          description: "Updated avatar URL"
+          example: "https://enablecode.vn/avatars/tri_new.jpg"
 
     CalibrationRequest:
       type: object
+      description: "Payload sent from the React + AI frontend containing calculated MediaPipe bounds."
       required:
-        - calibration_settings
+        - bounds
+        - preferences
       properties:
-        calibration_settings:
+        bounds:
           type: object
-          description: Dynamic JSON object representing facial/gesture limits.
+          description: "Calculated extreme coordinate boundaries of head movements."
           example: 
-            sensitivity: 0.8
-            neutral_face_baseline: [120, 240]
+            pitch_max: 0.25
+            pitch_min: -0.15
+            yaw_max: 0.30
+            yaw_min: -0.30
+        preferences:
+          type: object
+          description: "Action mapping preferences."
+          example:
+            drag_drop_gesture: "mouth_open"
+            run_code_gesture: "double_nod"
 
     CreateLessonRequest:
       type: object
+      description: "Payload for teachers/admins to author a new lesson."
       required:
         - topic_id
         - title
@@ -1019,62 +1085,85 @@ components:
       properties:
         topic_id:
           type: string
+          description: "Parent topic ObjectId"
           example: "60d5ecb8b392d700153f3a77"
         title:
           type: string
+          description: "Lesson title"
           example: "Introduction to Loops"
         order:
           type: integer
+          description: "Order index"
           example: 1
         difficulty:
           type: string
           enum: [SSS, SS, S, A, B, C, D, F]
+          description: "Difficulty tier"
           example: "B"
         problem_statement:
           type: string
+          description: "Task instructions"
           example: "Make the robot move forward exactly 5 times."
         toolbox_config:
           type: object
+          description: "Blockly toolbox definition JSON"
+          example: { "kind": "categoryToolbox", "contents": [] }
         initial_blocks:
           type: object
+          description: "Starting state of the workspace"
+          example: {}
         hint:
           type: array
+          description: "Array of hint configurations"
           items:
             type: object
             properties:
               text:
                 type: string
+                example: "Use a FOR block."
               type:
                 type: string
                 enum: [text, image, code]
+                example: "text"
         solution:
           type: object
+          description: "Solution workspace definition"
+          example: {}
         public_testcases:
           type: array
+          description: "Visible Piston execution testcases"
           items:
             type: object
             properties:
               description:
                 type: string
+                example: "Moves 5 times"
               expected_output:
                 type: string
+                example: "FORWARD x 5"
         hidden_testcases:
           type: array
+          description: "Hidden Piston execution testcases"
           items:
             type: object
             properties:
               description:
                 type: string
+                example: "Edge case testing"
               expected_output:
                 type: string
+                example: "FORWARD x 5"
         base_xp:
           type: integer
+          description: "Reward XP"
           example: 100
         duration:
           type: integer
+          description: "Expected time in minutes"
           example: 15
         is_active:
           type: boolean
+          description: "Publish status"
           default: true
 
     UpdateLessonRequest:
@@ -1119,12 +1208,14 @@ components:
 
     SubmitLessonRequest:
       type: object
+      description: "Payload sent when user double-nods to execute and submit their code."
       required:
         - workspace_state
       properties:
         workspace_state:
           type: object
-          description: "Serialized Blockly workspace XML/JSON to be executed and graded"
+          description: "Serialized Blockly workspace XML/JSON to be executed"
+          example: { "blocks": { "type": "text_print", "inputs": { "TEXT": "Hello World" } } }
         time_taken:
           type: integer
           description: "Time spent on this attempt in seconds"
@@ -1132,63 +1223,48 @@ components:
 
     SubmitLessonResponse:
       type: object
+      description: "Response returning the execution results and updated progress."
       properties:
         progress:
           $ref: '#/components/schemas/UserProgress'
         result:
           type: object
+          description: "Grading results from the backend"
           properties:
             passed:
               type: boolean
+              description: "Did the code pass all hidden testcases?"
               example: true
             points_earned:
               type: integer
-              description: "Points awarded for this submission"
+              description: "Amount of score awarded based on attempt count and base_xp"
               example: 85
-            xp_earned:
-              type: integer
-              description: "XP awarded (base_xp scaled by accuracy; 0 on retry)"
-              example: 87
             testcase_results:
               type: array
-              description: "Results for each public test case"
+              description: "Results mapping to the public_testcases"
               items:
                 type: object
                 properties:
                   description:
                     type: string
-                    example: "Robot moves forward 5 steps"
+                    example: "Check if output is Hello World"
                   passed:
                     type: boolean
                     example: true
                   actual_output:
                     type: string
-                    example: "FORWARD FORWARD FORWARD FORWARD FORWARD"
+                    example: "Hello World\n"
                   expected_output:
                     type: string
-                    example: "FORWARD FORWARD FORWARD FORWARD FORWARD"
-        user_stats:
-          type: object
-          description: "Updated user counters after this submission"
-          properties:
-            total_score:
-              type: integer
-              example: 1285
-            lessons_completed:
-              type: integer
-              example: 6
-            streak:
-              type: integer
-              example: 4
-            level:
-              type: integer
-              example: 2
+                    example: "Hello World\n"
 
     SaveProgressRequest:
       type: object
+      description: "Payload to save the current workspace state as a draft."
       required:
         - workspace_state
       properties:
         workspace_state:
           type: object
           description: "Current Blockly workspace state to save as draft"
+          example: { "blocks": { "type": "text_print" } }
