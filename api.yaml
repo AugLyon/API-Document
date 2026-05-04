@@ -240,11 +240,6 @@ paths:
             type: boolean
           description: Filter by active status (admin/teacher only)
         - in: query
-          name: req_level
-          schema:
-            type: integer
-          description: Filter lessons at or below a required level
-        - in: query
           name: page
           schema:
             type: integer
@@ -752,9 +747,6 @@ components:
         avatar:
           type: string
           example: "https://example.com/avatar.jpg"
-        calibration_is_calibrated:
-          type: boolean
-          example: true
         calibration_settings:
           type: object
           example: { "x_threshold": 0.5, "y_threshold": 0.3 }
@@ -770,9 +762,6 @@ components:
         level:
           type: integer
           example: 2
-        point:
-          type: integer
-          example: 450
         last_active_date:
           type: string
           format: date-time
@@ -801,9 +790,6 @@ components:
           type: string
           enum: [SSS, SS, S, A, B, C, D, F]
           example: "B"
-        theory:
-          type: string
-          description: "HTML/Markdown content for the lesson theory panel"
           example: "<p>A loop repeats a block of code...</p>"
         problem_statement:
           type: string
@@ -858,10 +844,6 @@ components:
                 type: string
               expected_output:
                 type: string
-        req_level:
-          type: integer
-          description: "Minimum user level required to access this lesson"
-          example: 1
         base_xp:
           type: integer
           description: "Base XP awarded on first completion"
@@ -887,13 +869,6 @@ components:
         status:
           type: string
           example: "completed"
-        accuracy:
-          type: number
-          format: float
-          example: 95.5
-        errors:
-          type: integer
-          example: 2
         attempts_count:
           type: integer
           example: 3
@@ -904,9 +879,6 @@ components:
           type: integer
           description: "Time taken in seconds"
           example: 300
-        points:
-          type: integer
-          example: 85
         submitted_at:
           type: string
           format: date-time
@@ -982,9 +954,6 @@ components:
           type: string
           description: "URL to the user's avatar image"
           example: "https://example.com/avatar.jpg"
-        calibration_is_calibrated:
-          type: boolean
-          description: "Whether the user has completed facial/gesture calibration"
           example: false
         calibration_settings:
           type: object
@@ -1029,9 +998,6 @@ components:
       required:
         - calibration_settings
       properties:
-        calibration_is_calibrated:
-          type: boolean
-          example: true
         calibration_settings:
           type: object
           description: Dynamic JSON object representing facial/gesture limits.
@@ -1066,9 +1032,6 @@ components:
           type: string
           enum: [SSS, SS, S, A, B, C, D, F]
           example: "B"
-        theory:
-          type: string
-          example: "<p>A loop repeats a block of code...</p>"
         problem_statement:
           type: string
           example: "Make the robot move forward exactly 5 times."
@@ -1106,10 +1069,6 @@ components:
                 type: string
               expected_output:
                 type: string
-        req_level:
-          type: integer
-          default: 1
-          example: 1
         base_xp:
           type: integer
           example: 100
@@ -1133,8 +1092,6 @@ components:
         difficulty:
           type: string
           enum: [SSS, SS, S, A, B, C, D, F]
-        theory:
-          type: string
         problem_statement:
           type: string
         toolbox_config:
@@ -1155,8 +1112,6 @@ components:
           type: array
           items:
             type: object
-        req_level:
-          type: integer
         base_xp:
           type: integer
         duration:
@@ -1176,10 +1131,6 @@ components:
           type: integer
           description: "Time spent on this attempt in seconds"
           example: 120
-        errors:
-          type: integer
-          description: "Number of runtime errors encountered before submitting"
-          example: 2
 
     SubmitLessonResponse:
       type: object
@@ -1192,10 +1143,6 @@ components:
             passed:
               type: boolean
               example: true
-            accuracy:
-              type: number
-              format: float
-              example: 87.5
             points_earned:
               type: integer
               description: "Points awarded for this submission"
