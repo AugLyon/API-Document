@@ -25,15 +25,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RegisterRequest'
+              $ref: "#/components/schemas/RegisterRequest"
       responses:
-        '201':
+        "201":
           description: User successfully registered
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
-        '400':
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
           description: Bad request (e.g., email already exists)
 
   /api/auth/login:
@@ -47,15 +47,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/LoginRequest'
+              $ref: "#/components/schemas/LoginRequest"
       responses:
-        '200':
+        "200":
           description: Successfully authenticated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AuthResponse'
-        '401':
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
           description: Unauthorized (Invalid email or password)
 
   # ========================================
@@ -70,13 +70,13 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: User profile retrieved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
-        '401':
+                $ref: "#/components/schemas/User"
+        "401":
           description: Unauthorized
     put:
       tags:
@@ -90,15 +90,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateProfileRequest'
+              $ref: "#/components/schemas/UpdateProfileRequest"
       responses:
-        '200':
+        "200":
           description: Profile updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/User'
-        '401':
+                $ref: "#/components/schemas/User"
+        "401":
           description: Unauthorized
     delete:
       tags:
@@ -108,9 +108,9 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: Account deleted successfully
-        '401':
+        "401":
           description: Unauthorized
 
   /api/users/stats:
@@ -122,7 +122,7 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: User statistics retrieved
           content:
             application/json:
@@ -145,7 +145,7 @@ paths:
                     type: integer
                     description: "Current gamified level of the user based on XP"
                     example: 5
-        '401':
+        "401":
           description: Unauthorized
 
   /api/users/calibration:
@@ -157,13 +157,13 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: Calibration data retrieved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Calibration'
-        '404':
+                $ref: "#/components/schemas/Calibration"
+        "404":
           description: Calibration data not found
     put:
       tags:
@@ -177,15 +177,15 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CalibrationRequest'
+              $ref: "#/components/schemas/CalibrationRequest"
       responses:
-        '200':
+        "200":
           description: Calibration settings updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Calibration'
-        '401':
+                $ref: "#/components/schemas/Calibration"
+        "401":
           description: Unauthorized
 
   # ========================================
@@ -200,14 +200,14 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: A list of topics
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Topic'
+                  $ref: "#/components/schemas/Topic"
 
   /api/topics/{topicId}/lessons:
     get:
@@ -225,14 +225,14 @@ paths:
             type: string
           example: "60d5ecb8b392d700153f3a77"
       responses:
-        '200':
+        "200":
           description: A list of lessons for the topic
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Lesson'
+                  $ref: "#/components/schemas/Lesson"
 
   # ========================================
   # LESSONS
@@ -273,7 +273,7 @@ paths:
             type: integer
             default: 20
       responses:
-        '200':
+        "200":
           description: Paginated list of lessons
           content:
             application/json:
@@ -283,7 +283,7 @@ paths:
                   data:
                     type: array
                     items:
-                      $ref: '#/components/schemas/Lesson'
+                      $ref: "#/components/schemas/Lesson"
                   total:
                     type: integer
                     description: "Total number of lessons matching criteria"
@@ -296,7 +296,7 @@ paths:
                     type: integer
                     description: "Items per page"
                     example: 20
-        '401':
+        "401":
           description: Unauthorized
 
     post:
@@ -311,17 +311,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateLessonRequest'
+              $ref: "#/components/schemas/CreateLessonRequest"
       responses:
-        '201':
+        "201":
           description: Lesson created successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Lesson'
-        '400':
+                $ref: "#/components/schemas/Lesson"
+        "400":
           description: Validation error
-        '403':
+        "403":
           description: Forbidden — insufficient role
 
   /api/lessons/{lessonId}:
@@ -340,15 +340,15 @@ paths:
             type: string
           example: "60d5ecb8b392d700153f3a55"
       responses:
-        '200':
+        "200":
           description: Lesson details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Lesson'
-        '401':
+                $ref: "#/components/schemas/Lesson"
+        "401":
           description: Unauthorized
-        '404':
+        "404":
           description: Lesson not found
 
     put:
@@ -369,17 +369,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/UpdateLessonRequest'
+              $ref: "#/components/schemas/UpdateLessonRequest"
       responses:
-        '200':
+        "200":
           description: Lesson updated successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Lesson'
-        '403':
+                $ref: "#/components/schemas/Lesson"
+        "403":
           description: Forbidden
-        '404':
+        "404":
           description: Lesson not found
 
     delete:
@@ -396,9 +396,9 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Lesson deleted successfully
-        '403':
+        "403":
           description: Forbidden
 
   /api/lessons/{lessonId}/submit:
@@ -420,17 +420,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SubmitLessonRequest'
+              $ref: "#/components/schemas/SubmitLessonRequest"
       responses:
-        '200':
+        "200":
           description: Submission graded and progress updated
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/SubmitLessonResponse'
-        '400':
+                $ref: "#/components/schemas/SubmitLessonResponse"
+        "400":
           description: Invalid workspace state
-        '404':
+        "404":
           description: Lesson not found
 
   /api/lessons/{lessonId}/save-progress:
@@ -452,14 +452,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/SaveProgressRequest'
+              $ref: "#/components/schemas/SaveProgressRequest"
       responses:
-        '200':
+        "200":
           description: Workspace progress saved
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserProgress'
+                $ref: "#/components/schemas/UserProgress"
 
   /api/lessons/{lessonId}/progress:
     get:
@@ -476,13 +476,13 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: User progress for the lesson
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserProgress'
-        '404':
+                $ref: "#/components/schemas/UserProgress"
+        "404":
           description: No progress record found
 
   /api/lessons/{lessonId}/hint:
@@ -505,7 +505,7 @@ paths:
             type: integer
             default: 0
       responses:
-        '200':
+        "200":
           description: Hint returned
           content:
             application/json:
@@ -520,7 +520,11 @@ paths:
                     example: 3
                   hint:
                     type: object
-                    example: { "text": "Use the mouth_open gesture to drag the block.", "type": "text" }
+                    example:
+                      {
+                        "text": "Use the mouth_open gesture to drag the block.",
+                        "type": "text",
+                      }
 
   /api/lessons/{lessonId}/toggle-active:
     patch:
@@ -537,7 +541,7 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Active status toggled
 
   # ========================================
@@ -552,14 +556,14 @@ paths:
       security:
         - bearerAuth: []
       responses:
-        '200':
+        "200":
           description: A list of user progress records
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/UserProgress'
+                  $ref: "#/components/schemas/UserProgress"
 
   /api/progress/{lessonId}:
     get:
@@ -576,12 +580,12 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Progress retrieved successfully
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/UserProgress'
+                $ref: "#/components/schemas/UserProgress"
 
   # ========================================
   # CUSTOM BLOCKS
@@ -601,14 +605,14 @@ paths:
             type: string
           description: Filter blocks by category (e.g., "Movement", "Logic")
       responses:
-        '200':
+        "200":
           description: Custom blocks loaded
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/CustomBlock'
+                  $ref: "#/components/schemas/CustomBlock"
 
   /api/custom-blocks/{blockId}:
     get:
@@ -625,12 +629,12 @@ paths:
           schema:
             type: string
       responses:
-        '200':
+        "200":
           description: Custom block details
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/CustomBlock'
+                $ref: "#/components/schemas/CustomBlock"
 
   # ========================================
   # LEADERBOARD
@@ -648,7 +652,7 @@ paths:
             type: integer
             default: 10
       responses:
-        '200':
+        "200":
           description: Leaderboard ranking
           content:
             application/json:
@@ -757,7 +761,7 @@ components:
         bounds:
           type: object
           description: "Coordinate boundaries derived from MediaPipe Face Mesh representing extreme limits of user's head movement."
-          example: 
+          example:
             pitch_max: 0.25
             pitch_min: -0.15
             yaw_max: 0.30
@@ -836,7 +840,11 @@ components:
         solution:
           type: object
           description: "Reference solution workspace state (Admin/Teacher only)"
-          example: { "blocks": { "type": "text_print", "inputs": { "TEXT": "Hello World" } } }
+          example:
+            {
+              "blocks":
+                { "type": "text_print", "inputs": { "TEXT": "Hello World" } },
+            }
         public_testcases:
           type: array
           description: "Test cases executed via Piston visible to the student for self-checking"
@@ -922,7 +930,12 @@ components:
         definition:
           type: object
           description: "Blockly block definition JSON mapping inputs and colors"
-          example: { "type": "enablecode_move_forward", "message0": "Move Forward", "colour": 230 }
+          example:
+            {
+              "type": "enablecode_move_forward",
+              "message0": "Move Forward",
+              "colour": 230,
+            }
         generator_code:
           type: string
           description: "JavaScript snippet that translates the block into Python string via Skulpt"
@@ -1031,7 +1044,7 @@ components:
           description: "JWT Bearer token for authorized routes"
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
         user:
-          $ref: '#/components/schemas/User'
+          $ref: "#/components/schemas/User"
 
     UpdateProfileRequest:
       type: object
@@ -1056,7 +1069,7 @@ components:
         bounds:
           type: object
           description: "Calculated extreme coordinate boundaries of head movements."
-          example: 
+          example:
             pitch_max: 0.25
             pitch_min: -0.15
             yaw_max: 0.30
@@ -1075,6 +1088,7 @@ components:
         - topic_id
         - title
         - order
+        - description
         - difficulty
         - problem_statement
         - toolbox_config
@@ -1176,6 +1190,8 @@ components:
           type: string
         order:
           type: integer
+        description:
+          type: string
         difficulty:
           type: string
           enum: [SSS, SS, S, A, B, C, D, F]
@@ -1215,7 +1231,11 @@ components:
         workspace_state:
           type: object
           description: "Serialized Blockly workspace XML/JSON to be executed"
-          example: { "blocks": { "type": "text_print", "inputs": { "TEXT": "Hello World" } } }
+          example:
+            {
+              "blocks":
+                { "type": "text_print", "inputs": { "TEXT": "Hello World" } },
+            }
         time_taken:
           type: integer
           description: "Time spent on this attempt in seconds"
@@ -1226,7 +1246,7 @@ components:
       description: "Response returning the execution results and updated progress."
       properties:
         progress:
-          $ref: '#/components/schemas/UserProgress'
+          $ref: "#/components/schemas/UserProgress"
         result:
           type: object
           description: "Grading results from the backend"
