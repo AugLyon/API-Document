@@ -7,6 +7,9 @@ info:
     Custom Blocks, and Calibrations for the Enable Code platform.
     Designed for users with hand disabilities to learn Python via facial gestures.
 servers:
+  # Added by API Auto Mocking Plugin
+  - description: SwaggerHub API Auto Mocking
+    url: https://virtserver.swaggerhub.com/none-6a6-179/Enable_Code/1.1.0
   - url: http://localhost:5000
     description: Local Development Server
 
@@ -800,6 +803,9 @@ components:
           type: integer
           description: "Display sequence within the topic"
           example: 1
+        description:
+          type: string
+          description: "Theoretical background and learning objectives"
         difficulty:
           type: string
           description: "Tiered difficulty ranking"
@@ -1227,7 +1233,12 @@ components:
       description: "Payload sent when user double-nods to execute and submit their code."
       required:
         - workspace_state
+        - python_code
       properties:
+        python_code:
+          type: string
+          description: "The compiled Python source code generated from the student's Blockly workspace to be executed."
+          example: "print('Hello World')\n"
         workspace_state:
           type: object
           description: "Serialized Blockly workspace XML/JSON to be executed"
