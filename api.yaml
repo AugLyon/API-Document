@@ -639,7 +639,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/CustomBlock"
 
-  # ========================================
+# ========================================
   # LEADERBOARD
   # ========================================
   /api/leaderboard:
@@ -647,38 +647,60 @@ paths:
       tags:
         - Leaderboard
       summary: Get user leaderboard
-      description: Retrieves a ranking of users based on their total score.
+      description: Retrieves a paginated ranking of users based on their total score.
       parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: "Page number for pagination"
         - in: query
           name: limit
           schema:
             type: integer
             default: 10
+          description: "Number of users per page"
       responses:
         "200":
           description: Leaderboard ranking
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
-                  properties:
-                    user_id:
-                      type: string
-                      example: "60d5ecb8b392d700153f3a45"
-                    name:
-                      type: string
-                      example: "Nguyen Van A"
-                    avatar:
-                      type: string
-                      example: "https://enablecode.vn/avatars/user.jpg"
-                    total_score:
-                      type: integer
-                      example: 2450
-                    lessons_completed:
-                      type: integer
-                      example: 12
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        user_id:
+                          type: string
+                          example: "60d5ecb8b392d700153f3a45"
+                        name:
+                          type: string
+                          example: "Nguyen Van A"
+                        avatar:
+                          type: string
+                          example: "https://enablecode.vn/avatars/user.jpg"
+                        total_score:
+                          type: integer
+                          example: 2450
+                        lessons_completed:
+                          type: integer
+                          example: 12
+                  total:
+                    type: integer
+                    description: "Total number of ranked users"
+                    example: 150
+                  page:
+                    type: integer
+                    description: "Current page number"
+                    example: 1
+                  limit:
+                    type: integer
+                    description: "Items per page"
+                    example: 10
 
 components:
   securitySchemes:
