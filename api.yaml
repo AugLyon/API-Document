@@ -38,6 +38,10 @@ paths:
                 $ref: "#/components/schemas/AuthResponse"
         "400":
           description: Bad request (e.g., email already exists)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/auth/login:
     post:
@@ -60,6 +64,10 @@ paths:
                 $ref: "#/components/schemas/AuthResponse"
         "401":
           description: Unauthorized (Invalid email or password)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   # ========================================
   # USERS & PROFILE
@@ -81,6 +89,10 @@ paths:
                 $ref: "#/components/schemas/User"
         "401":
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     put:
       tags:
         - Users
@@ -103,6 +115,10 @@ paths:
                 $ref: "#/components/schemas/User"
         "401":
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     delete:
       tags:
         - Users
@@ -115,6 +131,10 @@ paths:
           description: Account deleted successfully
         "401":
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/users/stats:
     get:
@@ -150,6 +170,10 @@ paths:
                     example: 5
         "401":
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/users/calibration:
     get:
@@ -168,6 +192,10 @@ paths:
                 $ref: "#/components/schemas/Calibration"
         "404":
           description: Calibration data not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     put:
       tags:
         - Users
@@ -190,6 +218,10 @@ paths:
                 $ref: "#/components/schemas/Calibration"
         "401":
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   # ========================================
   # TOPICS
@@ -301,6 +333,10 @@ paths:
                     example: 20
         "401":
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
     post:
       tags:
@@ -324,8 +360,16 @@ paths:
                 $ref: "#/components/schemas/Lesson"
         "400":
           description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "403":
           description: Forbidden — insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/lessons/{lessonId}:
     get:
@@ -351,8 +395,16 @@ paths:
                 $ref: "#/components/schemas/Lesson"
         "401":
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Lesson not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
     put:
       tags:
@@ -382,8 +434,16 @@ paths:
                 $ref: "#/components/schemas/Lesson"
         "403":
           description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Lesson not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
     delete:
       tags:
@@ -403,6 +463,10 @@ paths:
           description: Lesson deleted successfully
         "403":
           description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/lessons/{lessonId}/submit:
     post:
@@ -433,8 +497,16 @@ paths:
                 $ref: "#/components/schemas/SubmitLessonResponse"
         "400":
           description: Invalid workspace state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           description: Lesson not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /api/lessons/{lessonId}/save-progress:
     post:
@@ -639,7 +711,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/CustomBlock"
 
-# ========================================
+  # ========================================
   # LEADERBOARD
   # ========================================
   /api/leaderboard:
@@ -1321,3 +1393,34 @@ components:
           type: object
           description: "Current Blockly workspace state to save as draft"
           example: { "blocks": { "type": "text_print" } }
+    ErrorResponse:
+      type: object
+      description: "Standardized error response format across the API."
+      properties:
+        success:
+          type: boolean
+          description: "Always false for error responses."
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: "A machine-readable error code (e.g., 'USER_NOT_FOUND', 'INVALID_CREDENTIALS')."
+              example: "VALIDATION_ERROR"
+            message:
+              type: string
+              description: "An error message suitable for debugging."
+              example: "The provided email is already in use."
+            details:
+              type: array
+              description: "Optional array containing specific validation errors (which fields failed)."
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                    example: "password"
+                  issue:
+                    type: string
+                    example: "Password must be at least 8 characters long."
