@@ -68,7 +68,57 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /api/auth/forgot-password:
+    post:
+      tags:
+        - Authentication
+      summary: Request password reset
+      description: Generates a temporary reset token and sends a password reset link to the user's registered email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+      responses:
+        "200":
+          description: Password reset email sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForgotPasswordResponse"
+        "400":
+          description: Invalid email format
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
+  /api/auth/reset-password:
+    post:
+      tags:
+        - Authentication
+      summary: Reset password
+      description: Allows the user to set a new password using the token sent to their email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResetPasswordResponse"
+        "400":
+          description: Invalid or expired reset token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   # ========================================
   # USERS & PROFILE
   # ========================================
@@ -618,7 +668,43 @@ paths:
       responses:
         "200":
           description: Active status toggled
-
+  /api/lessons/{lessonId}/view-solution:
+    post:
+      tags:
+        - Lessons
+      summary: View lesson solution
+      description: Reveals the reference solution for a lesson. This action will flag the user's UserProgress (has_viewed_solution = true) and nullify potential points for future submissions of this lesson.
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: lessonId
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Solution revealed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  solution:
+                    type: object
+                    description: "Serialized JSON of the solution workspace"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Lesson not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   # ========================================
   # USER PROGRESS
   # ========================================
@@ -1014,6 +1100,17 @@ components:
           format: date-time
           description: "Timestamp of final submission"
           example: "2026-05-04T10:30:00Z"
+        hints_revealed:
+          type: array
+          description: "Array of hint indices that the user has revealed"
+          items:
+            type: integer
+          example: [0, 1]
+        has_viewed_solution:
+          type: boolean
+          description: "Flag indicating if the user has viewed the reference solution"
+          default: false
+          example: true
 
     CustomBlock:
       type: object
@@ -1424,3 +1521,48 @@ components:
                   issue:
                     type: string
                     example: "Password must be at least 8 characters long."
+    ForgotPasswordRequest:
+      type: object
+      description: "Payload to request a password reset email."
+      required:
+        - email
+      properties:
+        email:
+          type: string
+          format: email
+          description: "The user's registered email address."
+          example: "student_handsfree@enablecode.vn"
+    ForgotPasswordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "If that email is in our system, we have sent a password reset link."
+    ResetPasswordRequest:
+      type: object
+      description: "Payload to set a new password using a reset token."
+      required:
+        - token
+        - new_password
+      properties:
+        token:
+          type: string
+          description: "The temporary token sent to the user's email."
+          example: "a1b2c3d4e5f6g7h8i9j0"
+        new_password:
+          type: string
+          format: password
+          description: "The new password the user wants to set."
+          example: "NewP@ssw0rd2026"
+    ResetPasswordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Password has been successfully reset. You can now log in."
