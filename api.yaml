@@ -1,10 +1,12 @@
 openapi: 3.0.3
 info:
-  title: AuditionCode-BE API
-  version: 1.0.0
+  title: Enable Code API
+  version: 1.1.0
   description: >
-    OpenAPI specification aligned with the AuditionCode-BE project structure.
+    Complete OpenAPI specification for the Enable Code platform.
+    Aligned with the AuditionCode-BE project structure.
     Stack: Node.js, Express 5, TypeScript, MongoDB, and Mongoose.
+    Designed for users with hand disabilities to learn Python via facial gestures.
 servers:
   - url: http://localhost:{port}/api
     description: Local development server
@@ -29,11 +31,15 @@ tags:
     description: Public leaderboard endpoints
 
 paths:
+  # ========================================
+  # AUTHENTICATION
+  # ========================================
   /auth/register:
     post:
       tags: [Auth]
       summary: Register a new user
       operationId: register
+      description: Creates a new user account in the database.
       requestBody:
         required: true
         content:
@@ -55,6 +61,7 @@ paths:
       tags: [Auth]
       summary: Login and receive token
       operationId: login
+      description: Authenticates a user and returns a JWT access token. A long-lived refresh token is set as an HttpOnly cookie.
       requestBody:
         required: true
         content:
@@ -71,11 +78,58 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Logout user
+      operationId: logout
+      description: Invalidates the refresh token stored in the HttpOnly cookie and clears it. Removes the session from the user's refreshToken array in the database.
+      responses:
+        "200":
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Logged out successfully"
+
+  /auth/reset-password:
+    post:
+      tags: [Auth]
+      summary: Reset password
+      operationId: resetPassword
+      description: Allows the user to set a new password using the token sent to their email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ResetPasswordRequest"
+      responses:
+        "200":
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResetPasswordResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
+  # ========================================
+  # USERS & PROFILE
+  # ========================================
   /users/profile:
     get:
       tags: [Users]
       summary: Get authenticated user's profile
       operationId: getProfile
+      description: Retrieves the profile data of the currently authenticated user.
       security:
         - bearerAuth: []
       responses:
@@ -91,6 +145,7 @@ paths:
       tags: [Users]
       summary: Update profile info
       operationId: updateProfile
+      description: Updates basic profile information like name and avatar.
       security:
         - bearerAuth: []
       requestBody:
@@ -114,6 +169,7 @@ paths:
       tags: [Users]
       summary: Delete the authenticated user account
       operationId: deleteAccount
+      description: Deletes the currently authenticated user's account and all associated data (progress, calibration).
       security:
         - bearerAuth: []
       responses:
@@ -131,6 +187,7 @@ paths:
       tags: [Users]
       summary: Get user stats
       operationId: getStats
+      description: Retrieves aggregated stats for the user (total score, streak, lessons completed, level).
       security:
         - bearerAuth: []
       responses:
@@ -148,6 +205,7 @@ paths:
       tags: [Users]
       summary: Get user calibration settings
       operationId: getCalibration
+      description: Retrieves the user's specific facial boundary and preference calibration from the calibrations collection.
       security:
         - bearerAuth: []
       responses:
@@ -165,6 +223,7 @@ paths:
       tags: [Users]
       summary: Update calibration settings
       operationId: updateCalibration
+      description: Updates the user's specific facial/gesture calibration settings in the calibrations collection.
       security:
         - bearerAuth: []
       requestBody:
@@ -185,11 +244,15 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  # ========================================
+  # TOPICS
+  # ========================================
   /topics:
     get:
       tags: [Topics]
       summary: List all topics
       operationId: getAllTopics
+      description: Retrieves a list of all educational topics.
       security:
         - bearerAuth: []
       responses:
@@ -209,6 +272,7 @@ paths:
       tags: [Topics]
       summary: Get lessons under a topic
       operationId: getLessonsByTopic
+      description: Retrieves all lessons belonging to a specific topic.
       security:
         - bearerAuth: []
       parameters:
@@ -227,28 +291,84 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  # ========================================
+  # LESSONS
+  # ========================================
   /lessons:
     get:
       tags: [Lessons]
       summary: List all lessons
       operationId: getAllLessons
+      description: Retrieves a paginated list of all lessons. Supports filtering by topic, difficulty, and active status.
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: topicId
+          schema:
+            type: string
+          description: Filter lessons by topic ObjectId
+        - in: query
+          name: difficulty
+          schema:
+            type: string
+            enum: [beginner, easy, medium, hard]
+          description: Filter by difficulty level
+        - in: query
+          name: isActive
+          schema:
+            type: boolean
+          description: Filter by active status (admin/teacher only)
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+          description: Number of items per page
       responses:
         "200":
-          description: Lesson list
+          description: Paginated list of lessons
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Lesson"
+                type: object
+                properties:
+                  lessons:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Lesson"
+                  pagination:
+                    type: object
+                    properties:
+                      page:
+                        type: integer
+                        description: "Current page number"
+                        example: 1
+                      limit:
+                        type: integer
+                        description: "Items per page"
+                        example: 20
+                      total:
+                        type: integer
+                        description: "Total number of lessons matching the criteria"
+                        example: 42
+                      pages:
+                        type: integer
+                        description: "Total number of pages"
+                        example: 3
         "401":
           $ref: "#/components/responses/Unauthorized"
     post:
       tags: [Lessons]
       summary: Create a new lesson
       operationId: createLesson
+      description: Creates a new lesson. Restricted to admin and teacher roles.
       security:
         - bearerAuth: []
       requestBody:
@@ -268,12 +388,19 @@ paths:
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Forbidden — insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /lessons/{lessonId}:
     get:
       tags: [Lessons]
       summary: Get a single lesson
       operationId: getLesson
+      description: Retrieves full details of a lesson by ID including public test cases and block configurations.
       security:
         - bearerAuth: []
       parameters:
@@ -293,6 +420,7 @@ paths:
       tags: [Lessons]
       summary: Update a lesson
       operationId: updateLesson
+      description: Updates any field of an existing lesson. Restricted to admin and teacher roles.
       security:
         - bearerAuth: []
       parameters:
@@ -320,6 +448,7 @@ paths:
       tags: [Lessons]
       summary: Delete a lesson
       operationId: deleteLesson
+      description: Permanently deletes a lesson and all associated user progress records.
       security:
         - bearerAuth: []
       parameters:
@@ -341,6 +470,7 @@ paths:
       tags: [Lessons]
       summary: Submit solution for grading
       operationId: submitLesson
+      description: Submits the user's final Blockly workspace for grading. The backend executes the generated code via Piston against hidden test cases and updates UserProgress.
       security:
         - bearerAuth: []
       parameters:
@@ -370,6 +500,7 @@ paths:
       tags: [Lessons]
       summary: Save workspace state
       operationId: saveProgress
+      description: Autosaves the current state of the user's Blockly workspace without grading.
       security:
         - bearerAuth: []
       parameters:
@@ -399,6 +530,7 @@ paths:
       tags: [Lessons]
       summary: Get user progress for lesson
       operationId: getUserLessonProgressFromLessons
+      description: Returns the authenticated user's UserProgress record for this lesson, including saved workspace state for resuming.
       security:
         - bearerAuth: []
       parameters:
@@ -420,10 +552,17 @@ paths:
       tags: [Lessons]
       summary: Retrieve a hint
       operationId: getHint
+      description: Returns the ordered list of hints for the lesson progressively.
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/LessonId"
+        - in: query
+          name: index
+          schema:
+            type: integer
+            default: 0
+          description: Zero-based index of the hint to retrieve
       responses:
         "200":
           description: Hint response
@@ -441,6 +580,7 @@ paths:
       tags: [Lessons]
       summary: Toggle lesson visibility
       operationId: toggleLessonActive
+      description: Flips the isActive flag on a lesson. Restricted to admin and teacher roles.
       security:
         - bearerAuth: []
       parameters:
@@ -457,11 +597,45 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  /lessons/{lessonId}/view-solution:
+    post:
+      tags: [Lessons]
+      summary: View lesson solution
+      operationId: viewSolution
+      description: >
+        Reveals the reference solution for a lesson.
+        This action sets hasViewedSolution = true on the user's UserProgress
+        and nullifies potential points for any future submissions of this lesson.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/LessonId"
+      responses:
+        "200":
+          description: Solution revealed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  solution:
+                    type: object
+                    additionalProperties: true
+                    description: "Serialized JSON of the solution workspace"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  # ========================================
+  # USER PROGRESS
+  # ========================================
   /progress:
     get:
       tags: [Progress]
       summary: Get all progress records for user
       operationId: getAllUserProgress
+      description: Retrieves all progress records for the authenticated user across all lessons.
       security:
         - bearerAuth: []
       responses:
@@ -481,6 +655,7 @@ paths:
       tags: [Progress]
       summary: Get progress for specific lesson
       operationId: getUserLessonProgress
+      description: Retrieves the user's progress for a specific lesson ID.
       security:
         - bearerAuth: []
       parameters:
@@ -497,13 +672,23 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  # ========================================
+  # CUSTOM BLOCKS
+  # ========================================
   /custom-blocks:
     get:
       tags: [Custom Blocks]
       summary: List all custom Blockly blocks
       operationId: getAllCustomBlocks
+      description: Loads the definitions and Python generator code for custom Blockly blocks from the database.
       security:
         - bearerAuth: []
+      parameters:
+        - in: query
+          name: category
+          schema:
+            type: string
+          description: Filter blocks by toolbox category (e.g., "Movement", "Logic")
       responses:
         "200":
           description: Custom block list
@@ -521,6 +706,7 @@ paths:
       tags: [Custom Blocks]
       summary: Get a specific custom block
       operationId: getCustomBlock
+      description: Retrieves details for a specific custom block definition.
       security:
         - bearerAuth: []
       parameters:
@@ -537,20 +723,52 @@ paths:
         "404":
           $ref: "#/components/responses/NotFound"
 
+  # ========================================
+  # LEADERBOARD
+  # ========================================
   /leaderboard:
     get:
       tags: [Leaderboard]
       summary: Get ranked leaderboard
       operationId: getLeaderboard
+      description: Retrieves a paginated ranking of users based on their total score. No authentication required.
+      parameters:
+        - in: query
+          name: page
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 10
+          description: Number of users per page
       responses:
         "200":
-          description: Leaderboard entries
+          description: Leaderboard ranking
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/LeaderboardEntry"
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/LeaderboardEntry"
+                  total:
+                    type: integer
+                    description: "Total number of ranked users"
+                    example: 150
+                  page:
+                    type: integer
+                    description: "Current page number"
+                    example: 1
+                  limit:
+                    type: integer
+                    description: "Items per page"
+                    example: 10
 
 components:
   securitySchemes:
@@ -603,13 +821,20 @@ components:
             $ref: "#/components/schemas/ErrorResponse"
 
   schemas:
+    # ----------------------------------------
+    # Primitive / Utility Schemas
+    # ----------------------------------------
     ObjectId:
       type: string
       pattern: "^[a-fA-F0-9]{24}$"
       example: "60d5ecb8b392d700153f3a45"
 
+    # ----------------------------------------
+    # Core Data Schemas
+    # ----------------------------------------
     User:
       type: object
+      description: "Represents a registered user in the platform."
       required: [email, passwordHash, role, name]
       properties:
         _id:
@@ -617,13 +842,14 @@ components:
         email:
           type: string
           format: email
-          example: "student@example.com"
+          example: "student@enablecode.vn"
         passwordHash:
           type: string
           writeOnly: true
           example: "$2b$10$hashedPassword"
         role:
           type: string
+          enum: [student, teacher, admin]
           default: student
           example: student
         name:
@@ -632,22 +858,27 @@ components:
         avatar:
           type: string
           nullable: true
-          example: "https://example.com/avatar.png"
+          description: "URL link to user profile picture"
+          example: "https://enablecode.vn/avatars/user.jpg"
         totalScore:
           type: number
           default: 0
+          description: "Total leaderboard points accumulated"
           example: 1200
         lessonsCompleted:
           type: number
           default: 0
+          description: "Total count of lessons fully passed"
           example: 5
         streak:
           type: number
           default: 0
+          description: "Consecutive daily login and coding streak"
           example: 3
         level:
           type: number
           default: 0
+          description: "Gamification level based on XP/totalScore"
           example: 2
         resetPasswordToken:
           type: string
@@ -660,6 +891,7 @@ components:
           type: string
           format: date-time
           nullable: true
+          description: "Timestamp of the user's last interaction"
         createdAt:
           type: string
           format: date-time
@@ -669,22 +901,28 @@ components:
 
     UserStats:
       type: object
+      description: "Aggregated statistics for a user."
       properties:
         totalScore:
           type: number
+          description: "Total points accumulated across all lessons"
           example: 1200
         lessonsCompleted:
           type: number
+          description: "Total number of lessons successfully passed"
           example: 5
         streak:
           type: number
+          description: "Number of consecutive days the user has been active"
           example: 3
         level:
           type: number
+          description: "Current gamified level of the user based on XP"
           example: 2
 
     Topic:
       type: object
+      description: "A grouping container for lessons, acting as a curriculum chapter."
       required: [title]
       properties:
         _id:
@@ -695,7 +933,7 @@ components:
         description:
           type: string
           nullable: true
-          example: "Learn Python fundamentals."
+          example: "Learn the basics of syntax, variables, and printing output."
         difficulty:
           description: Mixed difficulty value; current model default is medium.
           default: medium
@@ -706,6 +944,7 @@ components:
         relevantTopicIds:
           type: array
           default: []
+          description: "Array of related Topic ObjectIds for curriculum branching"
           items:
             $ref: "#/components/schemas/ObjectId"
         isActive:
@@ -715,6 +954,7 @@ components:
 
     Lesson:
       type: object
+      description: "Represents a single learning module, including instructions, Blockly configurations, and testing logic."
       required: [topicId, title]
       properties:
         _id:
@@ -727,9 +967,11 @@ components:
         description:
           type: string
           nullable: true
+          description: "Theoretical background and learning objectives"
         order:
           type: number
           default: 0
+          description: "Display sequence within the topic"
           example: 1
         difficulty:
           description: Mixed difficulty value; current model default is medium.
@@ -741,49 +983,59 @@ components:
         problemStatement:
           type: string
           default: ""
-          example: "Print Hello World."
+          description: "Markdown string explaining the task to the student"
+          example: "Use the print block to output 'Hello World' to the terminal."
         toolboxConfig:
           type: object
           default: {}
           additionalProperties: true
+          description: "Blockly toolbox JSON defining which blocks are available for drag-and-drop."
         initialBlocks:
           type: object
           default: {}
           additionalProperties: true
+          description: "Pre-placed Blockly workspace JSON loaded when the lesson starts"
         hint:
           type: array
           default: []
+          description: "Progressive hints revealed to help the student"
           items:
             $ref: "#/components/schemas/Hint"
         solution:
           type: object
           default: {}
           additionalProperties: true
+          description: "Reference solution workspace state (admin/teacher only)"
         publicTestcases:
           type: array
           default: []
+          description: "Test cases visible to the student for self-checking"
           items:
             $ref: "#/components/schemas/Testcase"
         hiddenTestcases:
           type: array
           default: []
+          description: "Test cases used for grading only — not exposed to students"
           items:
             $ref: "#/components/schemas/Testcase"
         baseXp:
           type: number
           default: 0
+          description: "Base experience points awarded on completion"
           example: 100
         duration:
           type: number
-          description: Expected time in seconds.
           default: 0
-          example: 900
+          description: "Estimated completion time in minutes"
+          example: 15
         isActive:
           type: boolean
           default: true
+          description: "Controls student visibility; false hides it for drafting"
 
     UserProgress:
       type: object
+      description: "Tracks an individual user's attempt and completion status for a specific lesson."
       required: [userId, lessonId]
       properties:
         _id:
@@ -800,51 +1052,40 @@ components:
         attemptsCount:
           type: number
           default: 0
+          description: "Number of times the user triggered 'Run Code' (double nod)"
         hintsRevealed:
           type: array
           default: []
+          description: "Array of hint indices that the user has revealed"
           items:
             type: number
         hasViewedSolution:
           type: boolean
           default: false
+          description: "Flag indicating if the user has viewed the reference solution"
         workspaceState:
           type: object
           default: {}
           additionalProperties: true
+          description: "Serialized JSON of the student's current Blockly workspace"
         time:
           type: number
-          description: Time spent in seconds.
           default: 0
+          description: "Time spent in seconds"
         points:
           type: number
           default: 0
+          description: "Points awarded for this attempt"
+          example: 85
         submittedAt:
           type: string
           format: date-time
           nullable: true
-
-    CustomBlock:
-      type: object
-      required: [blockType]
-      properties:
-        _id:
-          $ref: "#/components/schemas/ObjectId"
-        blockType:
-          type: string
-          example: enablecode_print
-        definition:
-          type: object
-          additionalProperties: true
-        generatorCode:
-          type: string
-          example: "Blockly.Python['enablecode_print'] = function(block) { return 'print()\\n'; };"
-        category:
-          type: string
-          example: Text
+          description: "Timestamp of final submission"
 
     Calibration:
       type: object
+      description: "Stores personalized facial mapping parameters to adjust AI tracking sensitivity based on the user's actual range of motion."
       required: [userId]
       properties:
         _id:
@@ -853,21 +1094,70 @@ components:
           $ref: "#/components/schemas/ObjectId"
         bounds:
           type: object
-          additionalProperties: true
-          example:
-            pitchMax: 0.25
-            pitchMin: -0.15
-            yawMax: 0.3
-            yawMin: -0.3
+          description: "Screen-space pixel boundaries representing the limits of the user's facial movement area."
+          properties:
+            leftX:
+              type: number
+              description: "Left boundary x-coordinate"
+              example: 0
+            rightX:
+              type: number
+              description: "Right boundary x-coordinate"
+              example: 640
+            topY:
+              type: number
+              description: "Top boundary y-coordinate"
+              example: 0
+            bottomY:
+              type: number
+              description: "Bottom boundary y-coordinate"
+              example: 480
         preferences:
           type: object
+          description: "Numeric thresholds for gesture input sensitivity."
+          properties:
+            mouthDragThreshold:
+              type: number
+              description: "Threshold value for mouth-open drag gesture detection"
+              example: 0.5
+            trackingSensitivity:
+              type: number
+              description: "Head tracking movement sensitivity multiplier"
+              example: 1.0
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CustomBlock:
+      type: object
+      description: "Stores custom Blockly block definitions and their corresponding Python code generators."
+      required: [blockType]
+      properties:
+        _id:
+          $ref: "#/components/schemas/ObjectId"
+        blockType:
+          type: string
+          description: "Internal identifier for the block"
+          example: enablecode_move_forward
+        definition:
+          type: object
           additionalProperties: true
-          example:
-            dragDropGesture: mouth_open
-            runCodeGesture: double_nod
+          description: "Blockly block definition JSON mapping inputs and colors"
+        generatorCode:
+          type: string
+          description: "JavaScript snippet that translates the block into Python string via Skulpt"
+          example: "Blockly.Python['enablecode_print'] = function(block) { return 'print()\\n'; };"
+        category:
+          type: string
+          description: "Toolbox category where this block resides"
+          example: Text
 
     LeaderboardEntry:
       type: object
+      description: "A single entry in the leaderboard ranking."
       properties:
         userId:
           $ref: "#/components/schemas/ObjectId"
@@ -877,104 +1167,179 @@ components:
         avatar:
           type: string
           nullable: true
+          example: "https://enablecode.vn/avatars/user.jpg"
         totalScore:
           type: number
+          description: "Total leaderboard points"
           example: 2450
         lessonsCompleted:
           type: number
+          description: "Total lessons passed"
           example: 12
 
     Hint:
       type: object
+      description: "A single progressive hint for a lesson."
       additionalProperties: true
       properties:
+        level:
+          type: integer
+          description: "Ordering index of this hint (0-based)"
+          example: 0
         text:
           type: string
-          example: "Use the print block."
+          description: "The hint content"
+          example: "Use the print block from the Text category."
         type:
           type: string
           example: text
 
     Testcase:
       type: object
+      description: "A test case used for grading lesson submissions via the Piston API."
       additionalProperties: true
       properties:
-        input:
-          type: string
-          example: ""
-        expectedOutput:
-          type: string
-          example: "Hello World\n"
         description:
           type: string
-          example: "Checks exact output."
+          description: "Human-readable description of the test intent"
+          example: "Check if output is Hello World"
+        stdin:
+          type: string
+          description: "Standard input to pass to the program"
+          example: ""
+        args:
+          type: array
+          description: "Command-line arguments to pass to the program"
+          items:
+            type: string
+          example: []
+        expectedOutput:
+          type: string
+          description: "Exact stdout match required to pass"
+          example: "Hello World\n"
 
+    # ----------------------------------------
+    # Request Schemas
+    # ----------------------------------------
     RegisterRequest:
       type: object
+      description: "Payload required to register a new user."
       required: [email, password, name]
       properties:
         email:
           type: string
           format: email
+          example: "newuser@enablecode.vn"
         password:
           type: string
           format: password
+          example: "P@ssw0rd123"
         name:
           type: string
+          example: "Nguyen Van A"
         role:
           type: string
           default: student
+          enum: [student, teacher, admin]
         avatar:
           type: string
           nullable: true
+          example: "https://enablecode.vn/avatars/default.png"
 
     LoginRequest:
       type: object
+      description: "Credentials payload for authentication."
       required: [email, password]
       properties:
         email:
           type: string
           format: email
+          example: "student@enablecode.vn"
         password:
           type: string
           format: password
+          example: "P@ssw0rd123"
 
-    AuthResponse:
+    ForgotPasswordRequest:
       type: object
+      description: "Payload to request a password reset email."
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+          description: "The user's registered email address."
+          example: "student@enablecode.vn"
+
+    ResetPasswordRequest:
+      type: object
+      description: "Payload to set a new password using a reset token."
+      required: [token, newPassword]
       properties:
         token:
           type: string
-          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-        user:
-          $ref: "#/components/schemas/User"
+          description: "The temporary token sent to the user's email."
+          example: "a1b2c3d4e5f6g7h8i9j0"
+        newPassword:
+          type: string
+          format: password
+          description: "The new password the user wants to set."
+          example: "NewP@ssw0rd2026"
 
     UpdateProfileRequest:
       type: object
+      description: "Payload to update user metadata."
       properties:
         name:
           type: string
+          example: "Nguyen Van A Updated"
         avatar:
           type: string
           nullable: true
+          example: "https://enablecode.vn/avatars/user_new.jpg"
 
     UpdateCalibrationRequest:
       type: object
+      description: "Payload sent from the React + AI frontend containing calculated MediaPipe bounds."
+      required: [bounds, preferences]
       properties:
         bounds:
           type: object
-          additionalProperties: true
+          description: "Screen-space pixel boundaries of the user's facial movement."
+          properties:
+            leftX:
+              type: number
+              example: 0
+            rightX:
+              type: number
+              example: 640
+            topY:
+              type: number
+              example: 0
+            bottomY:
+              type: number
+              example: 480
         preferences:
           type: object
-          additionalProperties: true
+          description: "Gesture sensitivity thresholds."
+          properties:
+            mouthDragThreshold:
+              type: number
+              example: 0.5
+            trackingSensitivity:
+              type: number
+              example: 1.0
 
     CreateLessonRequest:
       type: object
+      description: "Payload for teachers/admins to author a new lesson."
       required: [topicId, title]
       properties:
         topicId:
           $ref: "#/components/schemas/ObjectId"
         title:
           type: string
+          example: "Introduction to Loops"
         description:
           type: string
         order:
@@ -989,6 +1354,7 @@ components:
         problemStatement:
           type: string
           default: ""
+          example: "Make the robot move forward exactly 5 times."
         toolboxConfig:
           type: object
           additionalProperties: true
@@ -1019,9 +1385,12 @@ components:
         baseXp:
           type: number
           default: 0
+          example: 100
         duration:
           type: number
           default: 0
+          description: "Expected time in minutes"
+          example: 15
         isActive:
           type: boolean
           default: true
@@ -1033,53 +1402,110 @@ components:
 
     SubmitLessonRequest:
       type: object
+      description: "Payload sent when user double-nods to execute and submit their code."
       required: [workspaceState]
       properties:
         workspaceState:
           type: object
           additionalProperties: true
+          description: "Serialized Blockly workspace XML/JSON to be submitted"
         code:
           type: string
-          description: Optional generated code if the frontend submits generated source.
+          description: "The compiled Python source code generated from the student's Blockly workspace."
+          example: "print('Hello World')\n"
         time:
           type: number
-          description: Time spent in seconds.
+          description: "Time spent on this attempt in seconds"
+          example: 120
 
     SubmitLessonResponse:
       type: object
+      description: "Response returning the execution results and updated progress."
       properties:
         progress:
           $ref: "#/components/schemas/UserProgress"
         passed:
           type: boolean
+          description: "Did the code pass all hidden test cases?"
+          example: true
         points:
           type: number
+          description: "Points awarded for this submission"
+          example: 85
         output:
           type: string
+          description: "Standard output from code execution"
+          example: "Hello World\n"
         testcaseResults:
           type: array
+          description: "Per-test-case grading results"
           items:
             type: object
             additionalProperties: true
 
     SaveProgressRequest:
       type: object
+      description: "Payload to save the current workspace state as a draft."
       required: [workspaceState]
       properties:
         workspaceState:
           type: object
           additionalProperties: true
+          description: "Current Blockly workspace state to save as draft"
         time:
           type: number
-          description: Time spent in seconds.
+          description: "Time spent in seconds so far"
+
+    # ----------------------------------------
+    # Response Schemas
+    # ----------------------------------------
+    AuthResponse:
+      type: object
+      description: "Response returned upon successful login/registration containing the JWT."
+      properties:
+        success:
+          type: boolean
+          description: "Indicates operation status"
+          example: true
+        accessToken:
+          type: string
+          description: >
+            Short-lived JWT access token. Include as Bearer token in the
+            Authorization header for all protected routes.
+            A long-lived refreshToken is also set as an HttpOnly cookie.
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        user:
+          $ref: "#/components/schemas/User"
+
+    ForgotPasswordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "If that email is in our system, we have sent a password reset link."
+
+    ResetPasswordResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Password has been successfully reset. You can now log in."
 
     HintResponse:
       type: object
+      description: "Response containing the requested hint and the list of all revealed hint indices."
       properties:
         hint:
           $ref: "#/components/schemas/Hint"
         hintsRevealed:
           type: array
+          description: "Updated list of all hint indices the user has now revealed"
           items:
             type: number
 
@@ -1092,7 +1518,32 @@ components:
 
     ErrorResponse:
       type: object
+      description: "Standardized error response format across the API."
       properties:
-        message:
-          type: string
-          example: Something went wrong
+        success:
+          type: boolean
+          description: "Always false for error responses."
+          example: false
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: "A machine-readable error code (e.g., 'USER_NOT_FOUND', 'INVALID_CREDENTIALS')."
+              example: "VALIDATION_ERROR"
+            message:
+              type: string
+              description: "A human-readable error message."
+              example: "The provided email is already in use."
+            details:
+              type: array
+              description: "Optional array of field-level validation errors."
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                    example: "password"
+                  issue:
+                    type: string
+                    example: "Password must be at least 8 characters long."
