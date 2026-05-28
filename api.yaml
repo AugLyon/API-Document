@@ -470,7 +470,7 @@ paths:
       tags: [Lessons]
       summary: Submit solution for grading
       operationId: submitLesson
-      description: Submits the user's final Blockly workspace for grading. The backend executes the generated code via Piston against hidden test cases and updates UserProgress.
+      description: Submits the user's final Blockly workspace for grading. The backend executes the generated Python code via Wandbox (cpython-3.10.15) against hidden test cases and updates UserProgress.
       security:
         - bearerAuth: []
       parameters:
@@ -552,7 +552,7 @@ paths:
       tags: [Lessons]
       summary: Retrieve a hint
       operationId: getHint
-      description: Returns the ordered list of hints for the lesson progressively.
+      description: Returns a single hint by zero-based index. Read-only — does not write to UserProgress.
       security:
         - bearerAuth: []
       parameters:
@@ -1409,7 +1409,7 @@ components:
           type: object
           additionalProperties: true
           description: "Serialized Blockly workspace XML/JSON to be submitted"
-        code:
+        pythonCode:
           type: string
           description: "The compiled Python source code generated from the student's Blockly workspace."
           example: "print('Hello World')\n"
@@ -1499,15 +1499,14 @@ components:
 
     HintResponse:
       type: object
-      description: "Response containing the requested hint and the list of all revealed hint indices."
+      description: "Response containing the requested hint at the given index. Read-only — does not mutate UserProgress."
       properties:
         hint:
           $ref: "#/components/schemas/Hint"
-        hintsRevealed:
-          type: array
-          description: "Updated list of all hint indices the user has now revealed"
-          items:
-            type: number
+        index:
+          type: integer
+          description: "The zero-based index of the returned hint"
+          example: 0
 
     MessageResponse:
       type: object
