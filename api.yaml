@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Enable Code API
-  version: 1.1.0
+  version: 1.2.1
   description: >
     Complete OpenAPI specification for the Enable Code platform.
     Aligned with the AuditionCode-BE project structure.
@@ -52,7 +52,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AuthResponse"
+                $ref: "#/components/schemas/RegisterResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
 
@@ -75,8 +75,32 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AuthResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+
+  /auth/refresh-token:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      operationId: refreshToken
+      description: Issues a new short-lived access token using the refresh token stored in the HttpOnly cookie.
+      responses:
+        "200":
+          description: New access token issued
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshTokenResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /auth/logout:
     post:
@@ -99,12 +123,37 @@ paths:
                     type: string
                     example: "Logged out successfully"
 
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request a password reset
+      operationId: forgotPassword
+      description: >
+        Creates a password reset token for the given email and sends a reset link via email.
+        Always returns success to avoid email enumeration. In non-production environments,
+        the response may include the reset token and URL for testing.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+      responses:
+        "200":
+          description: Reset request accepted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForgotPasswordResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+
   /auth/reset-password:
     post:
       tags: [Auth]
-      summary: Reset password
+      summary: Reset password with token
       operationId: resetPassword
-      description: Allows the user to set a new password using the token sent to their email.
+      description: Sets a new password using the token from the reset email. Invalidates all active refresh tokens.
       requestBody:
         required: true
         content:
@@ -138,7 +187,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/User"
+                $ref: "#/components/schemas/ProfileResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
     put:
@@ -160,7 +209,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/User"
+                $ref: "#/components/schemas/UpdateProfileResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -178,7 +227,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: "#/components/schemas/SuccessMessageResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
 
@@ -196,7 +245,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UserStats"
+                $ref: "#/components/schemas/UserStatsResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
 
@@ -214,7 +263,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Calibration"
+                $ref: "#/components/schemas/CalibrationResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
@@ -238,7 +287,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Calibration"
+                $ref: "#/components/schemas/UpdateCalibrationResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -261,11 +310,99 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Topic"
+                $ref: "#/components/schemas/TopicsListResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
+    post:
+      tags: [Topics]
+      summary: Create a new topic
+      operationId: createTopic
+      description: Creates a new educational topic. Restricted to admin and teacher roles.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTopicRequest"
+      responses:
+        "201":
+          description: Topic created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateTopicResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Forbidden — insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /topics/{topicId}:
+    put:
+      tags: [Topics]
+      summary: Update a topic
+      operationId: updateTopic
+      description: Updates an existing topic. Restricted to admin and teacher roles.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TopicId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTopicRequest"
+      responses:
+        "200":
+          description: Topic updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateTopicResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Forbidden — insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Topics]
+      summary: Delete a topic
+      operationId: deleteTopic
+      description: Deletes a topic and deactivates related lessons. Restricted to admin and teacher roles.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TopicId"
+      responses:
+        "200":
+          description: Topic deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessMessageResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Forbidden — insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   /topics/{topicId}/lessons:
     get:
@@ -283,11 +420,37 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/Lesson"
+                $ref: "#/components/schemas/TopicLessonsResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /topics/{topicId}/toggle-active:
+    patch:
+      tags: [Topics]
+      summary: Toggle topic visibility
+      operationId: toggleTopicActive
+      description: Flips the isActive flag on a topic. Restricted to admin and teacher roles.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TopicId"
+      responses:
+        "200":
+          description: Topic active status toggled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ToggleTopicActiveResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Forbidden — insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -337,31 +500,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  lessons:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/Lesson"
-                  pagination:
-                    type: object
-                    properties:
-                      page:
-                        type: integer
-                        description: "Current page number"
-                        example: 1
-                      limit:
-                        type: integer
-                        description: "Items per page"
-                        example: 20
-                      total:
-                        type: integer
-                        description: "Total number of lessons matching the criteria"
-                        example: 42
-                      pages:
-                        type: integer
-                        description: "Total number of pages"
-                        example: 3
+                $ref: "#/components/schemas/LessonsListResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
     post:
@@ -383,7 +522,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Lesson"
+                $ref: "#/components/schemas/CreateLessonResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -411,7 +550,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Lesson"
+                $ref: "#/components/schemas/LessonDetailResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
@@ -437,11 +576,17 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Lesson"
+                $ref: "#/components/schemas/UpdateLessonResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Forbidden — insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           $ref: "#/components/responses/NotFound"
     delete:
@@ -459,9 +604,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/MessageResponse"
+                $ref: "#/components/schemas/SuccessMessageResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Forbidden — insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -517,7 +668,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UserProgress"
+                $ref: "#/components/schemas/SaveProgressResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
         "401":
@@ -541,7 +692,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UserProgress"
+                $ref: "#/components/schemas/UserProgressResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
@@ -591,9 +742,15 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/Lesson"
+                $ref: "#/components/schemas/ToggleLessonActiveResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Forbidden — insufficient role
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -616,12 +773,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  solution:
-                    type: object
-                    additionalProperties: true
-                    description: "Serialized JSON of the solution workspace"
+                $ref: "#/components/schemas/ViewSolutionResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
@@ -644,9 +796,7 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/UserProgress"
+                $ref: "#/components/schemas/ProgressListResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
 
@@ -666,7 +816,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/UserProgress"
+                $ref: "#/components/schemas/UserProgressResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
@@ -695,11 +845,47 @@ paths:
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: "#/components/schemas/CustomBlock"
+                $ref: "#/components/schemas/CustomBlocksListResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
+
+  /custom-blocks/create:
+    post:
+      tags: [Custom Blocks]
+      summary: Create a custom Blockly block
+      operationId: createCustomBlock
+      description: Creates a new custom block definition. Restricted to admin role only.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCustomBlockRequest"
+      responses:
+        "201":
+          description: Custom block created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateCustomBlockResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Forbidden — admin role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "409":
+          description: Block type already exists
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /custom-blocks/{blockId}:
     get:
@@ -717,9 +903,41 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/CustomBlock"
+                $ref: "#/components/schemas/CustomBlockResponse"
         "401":
           $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Custom Blocks]
+      summary: Update a custom Blockly block
+      operationId: updateCustomBlock
+      description: Updates an existing custom block definition. Restricted to admin role only.
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/BlockId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCustomBlockRequest"
+      responses:
+        "200":
+          description: Custom block updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UpdateCustomBlockResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "403":
+          description: Forbidden — admin role required
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           $ref: "#/components/responses/NotFound"
 
@@ -751,24 +969,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  data:
-                    type: array
-                    items:
-                      $ref: "#/components/schemas/LeaderboardEntry"
-                  total:
-                    type: integer
-                    description: "Total number of ranked users"
-                    example: 150
-                  page:
-                    type: integer
-                    description: "Current page number"
-                    example: 1
-                  limit:
-                    type: integer
-                    description: "Items per page"
-                    example: 10
+                $ref: "#/components/schemas/LeaderboardResponse"
 
 components:
   securitySchemes:
@@ -935,12 +1136,10 @@ components:
           nullable: true
           example: "Learn the basics of syntax, variables, and printing output."
         difficulty:
-          description: Mixed difficulty value; current model default is medium.
+          type: string
+          enum: [beginner, easy, medium, hard]
           default: medium
-          oneOf:
-            - type: string
-            - type: number
-            - type: object
+          example: medium
         relevantTopicIds:
           type: array
           default: []
@@ -951,10 +1150,47 @@ components:
           type: boolean
           default: true
           example: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    LessonSummary:
+      type: object
+      description: "Condensed lesson fields returned in list endpoints."
+      properties:
+        _id:
+          $ref: "#/components/schemas/ObjectId"
+        topicId:
+          $ref: "#/components/schemas/ObjectId"
+        title:
+          type: string
+          example: "Python Basics: Print"
+        description:
+          type: string
+          nullable: true
+        order:
+          type: number
+          example: 1
+        difficulty:
+          type: string
+          enum: [beginner, easy, medium, hard]
+          example: medium
+        baseXp:
+          type: number
+          example: 100
+        duration:
+          type: number
+          example: 15
+        isActive:
+          type: boolean
+          example: true
 
     Lesson:
       type: object
-      description: "Represents a single learning module, including instructions, Blockly configurations, and testing logic."
+      description: "Full lesson detail including Blockly configurations and test cases."
       required: [topicId, title]
       properties:
         _id:
@@ -967,24 +1203,14 @@ components:
         description:
           type: string
           nullable: true
-          description: "Theoretical background and learning objectives"
         order:
           type: number
           default: 0
-          description: "Display sequence within the topic"
           example: 1
         difficulty:
-          description: Mixed difficulty value; current model default is medium.
-          default: medium
-          oneOf:
-            - type: string
-            - type: number
-            - type: object
-        problemStatement:
           type: string
-          default: ""
-          description: "Markdown string explaining the task to the student"
-          example: "Use the print block to output 'Hello World' to the terminal."
+          enum: [beginner, easy, medium, hard]
+          default: medium
         toolboxConfig:
           type: object
           default: {}
@@ -995,10 +1221,15 @@ components:
           default: {}
           additionalProperties: true
           description: "Pre-placed Blockly workspace JSON loaded when the lesson starts"
+        allowedBlocks:
+          type: array
+          default: []
+          description: "Block type identifiers allowed in this lesson"
+          items:
+            type: string
         hint:
           type: array
           default: []
-          description: "Progressive hints revealed to help the student"
           items:
             $ref: "#/components/schemas/Hint"
         solution:
@@ -1009,7 +1240,6 @@ components:
         publicTestcases:
           type: array
           default: []
-          description: "Test cases visible to the student for self-checking"
           items:
             $ref: "#/components/schemas/Testcase"
         hiddenTestcases:
@@ -1021,17 +1251,68 @@ components:
         baseXp:
           type: number
           default: 0
-          description: "Base experience points awarded on completion"
           example: 100
         duration:
           type: number
           default: 0
-          description: "Estimated completion time in minutes"
           example: 15
         isActive:
           type: boolean
           default: true
-          description: "Controls student visibility; false hides it for drafting"
+
+    ProgressSummary:
+      type: object
+      description: "Condensed progress fields embedded in lesson list responses."
+      properties:
+        status:
+          type: string
+          enum: [not_started, in_progress, completed, failed]
+          example: in_progress
+        attemptsCount:
+          type: number
+          example: 0
+        points:
+          type: number
+          example: 0
+        hasViewedSolution:
+          type: boolean
+          example: false
+
+    UserPublic:
+      type: object
+      description: "User fields returned in API responses (no passwordHash)."
+      properties:
+        _id:
+          $ref: "#/components/schemas/ObjectId"
+        email:
+          type: string
+          format: email
+        name:
+          type: string
+        role:
+          type: string
+          enum: [student, teacher, admin]
+        avatar:
+          type: string
+          nullable: true
+        totalScore:
+          type: number
+        lessonsCompleted:
+          type: number
+        streak:
+          type: number
+        level:
+          type: number
+        lastActiveDate:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
 
     UserProgress:
       type: object
@@ -1159,7 +1440,11 @@ components:
       type: object
       description: "A single entry in the leaderboard ranking."
       properties:
-        userId:
+        rank:
+          type: integer
+          description: "User's rank position on the leaderboard"
+          example: 1
+        _id:
           $ref: "#/components/schemas/ObjectId"
         name:
           type: string
@@ -1170,17 +1455,37 @@ components:
           example: "https://enablecode.vn/avatars/user.jpg"
         totalScore:
           type: number
-          description: "Total leaderboard points"
           example: 2450
         lessonsCompleted:
           type: number
-          description: "Total lessons passed"
           example: 12
+        streak:
+          type: number
+          example: 3
+        level:
+          type: number
+          example: 2
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 20
+        total:
+          type: integer
+          example: 42
+        pages:
+          type: integer
+          example: 3
 
     Hint:
       type: object
       description: "A single progressive hint for a lesson."
-      additionalProperties: true
+      required: [level, text]
       properties:
         level:
           type: integer
@@ -1190,14 +1495,10 @@ components:
           type: string
           description: "The hint content"
           example: "Use the print block from the Text category."
-        type:
-          type: string
-          example: text
 
     Testcase:
       type: object
-      description: "A test case used for grading lesson submissions via the Piston API."
-      additionalProperties: true
+      description: "A test case used for grading lesson submissions via Wandbox (cpython-3.10.15)."
       properties:
         description:
           type: string
@@ -1224,7 +1525,7 @@ components:
     RegisterRequest:
       type: object
       description: "Payload required to register a new user."
-      required: [email, password, name]
+      required: [email, password, name, role]
       properties:
         email:
           type: string
@@ -1239,8 +1540,8 @@ components:
           example: "Nguyen Van A"
         role:
           type: string
-          default: student
           enum: [student, teacher, admin]
+          example: student
         avatar:
           type: string
           nullable: true
@@ -1262,29 +1563,60 @@ components:
 
     ForgotPasswordRequest:
       type: object
-      description: "Payload to request a password reset email."
       required: [email]
       properties:
         email:
           type: string
           format: email
-          description: "The user's registered email address."
           example: "student@enablecode.vn"
 
     ResetPasswordRequest:
       type: object
-      description: "Payload to set a new password using a reset token."
-      required: [token, newPassword]
+      required: [token, password]
       properties:
         token:
           type: string
-          description: "The temporary token sent to the user's email."
+          description: "Reset token from the password reset email"
           example: "a1b2c3d4e5f6g7h8i9j0"
-        newPassword:
+        password:
           type: string
           format: password
-          description: "The new password the user wants to set."
+          description: "The new password to set"
           example: "NewP@ssw0rd2026"
+
+    CreateTopicRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          example: "Introduction to Python"
+        description:
+          type: string
+        difficulty:
+          type: string
+          enum: [beginner, easy, medium, hard]
+        relevantTopicIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/ObjectId"
+
+    UpdateTopicRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        difficulty:
+          type: string
+          enum: [beginner, easy, medium, hard]
+        relevantTopicIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/ObjectId"
+        isActive:
+          type: boolean
 
     UpdateProfileRequest:
       type: object
@@ -1346,15 +1678,9 @@ components:
           type: number
           default: 0
         difficulty:
-          oneOf:
-            - type: string
-            - type: number
-            - type: object
-          default: medium
-        problemStatement:
           type: string
-          default: ""
-          example: "Make the robot move forward exactly 5 times."
+          enum: [beginner, easy, medium, hard]
+          default: medium
         toolboxConfig:
           type: object
           additionalProperties: true
@@ -1363,6 +1689,11 @@ components:
           type: object
           additionalProperties: true
           default: {}
+        allowedBlocks:
+          type: array
+          items:
+            type: string
+          default: []
         hint:
           type: array
           items:
@@ -1402,46 +1733,102 @@ components:
 
     SubmitLessonRequest:
       type: object
-      description: "Payload sent when user double-nods to execute and submit their code."
+      description: "Payload sent when user double-nods to execute and submit their code. Requires workspaceState and either pythonCode or code."
       required: [workspaceState]
       properties:
         workspaceState:
           type: object
           additionalProperties: true
-          description: "Serialized Blockly workspace XML/JSON to be submitted"
+          description: "Serialized Blockly workspace JSON to be submitted"
         pythonCode:
           type: string
-          description: "The compiled Python source code generated from the student's Blockly workspace."
+          description: "Compiled Python source code. Required unless code is provided."
+          example: "print('Hello World')\n"
+        code:
+          type: string
+          description: "Alias for pythonCode. Required unless pythonCode is provided."
           example: "print('Hello World')\n"
         time:
           type: number
           description: "Time spent on this attempt in seconds"
           example: 120
+        timeTaken:
+          type: number
+          description: "Alias for time accepted by the backend controller."
+          example: 120
+
+    CreateCustomBlockRequest:
+      type: object
+      required: [blockType, definition, generatorCode, category]
+      properties:
+        blockType:
+          type: string
+          example: enablecode_move_forward
+        definition:
+          type: object
+          additionalProperties: true
+        generatorCode:
+          type: string
+        category:
+          type: string
+          example: Movement
+
+    UpdateCustomBlockRequest:
+      type: object
+      properties:
+        blockType:
+          type: string
+        definition:
+          type: object
+          additionalProperties: true
+        generatorCode:
+          type: string
+        category:
+          type: string
 
     SubmitLessonResponse:
       type: object
       description: "Response returning the execution results and updated progress."
       properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Submission graded and progress updated"
         progress:
           $ref: "#/components/schemas/UserProgress"
         passed:
           type: boolean
-          description: "Did the code pass all hidden test cases?"
           example: true
         points:
           type: number
-          description: "Points awarded for this submission"
           example: 85
         output:
           type: string
-          description: "Standard output from code execution"
           example: "Hello World\n"
         testcaseResults:
           type: array
-          description: "Per-test-case grading results"
           items:
             type: object
-            additionalProperties: true
+            properties:
+              description:
+                type: string
+              passed:
+                type: boolean
+              expectedOutput:
+                type: string
+              actualOutput:
+                type: string
+              error:
+                type: string
+        result:
+          type: object
+          properties:
+            passed:
+              type: boolean
+            score:
+              type: number
 
     SaveProgressRequest:
       type: object
@@ -1459,13 +1846,24 @@ components:
     # ----------------------------------------
     # Response Schemas
     # ----------------------------------------
-    AuthResponse:
+    RegisterResponse:
       type: object
-      description: "Response returned upon successful login/registration containing the JWT."
       properties:
         success:
           type: boolean
-          description: "Indicates operation status"
+          example: true
+        message:
+          type: string
+          example: "User successfully registered"
+        user:
+          $ref: "#/components/schemas/UserPublic"
+
+    AuthResponse:
+      type: object
+      description: "Response returned upon successful login containing the JWT."
+      properties:
+        success:
+          type: boolean
           example: true
         accessToken:
           type: string
@@ -1475,7 +1873,17 @@ components:
             A long-lived refreshToken is also set as an HttpOnly cookie.
           example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
         user:
-          $ref: "#/components/schemas/User"
+          $ref: "#/components/schemas/UserPublic"
+
+    RefreshTokenResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        accessToken:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 
     ForgotPasswordResponse:
       type: object
@@ -1485,7 +1893,25 @@ components:
           example: true
         message:
           type: string
-          example: "If that email is in our system, we have sent a password reset link."
+          example: "If an account exists for this email, a password reset token has been created"
+        resetToken:
+          type: string
+          description: "Included only when NODE_ENV is not production"
+        resetTokenExpiresAt:
+          type: string
+          format: date-time
+          description: "Included only when NODE_ENV is not production"
+        resetUrl:
+          type: string
+          description: "Included only when NODE_ENV is not production"
+        mail:
+          type: object
+          description: "Mail delivery status — included only in non-production"
+          properties:
+            sent:
+              type: boolean
+            skippedReason:
+              type: string
 
     ResetPasswordResponse:
       type: object
@@ -1495,25 +1921,370 @@ components:
           example: true
         message:
           type: string
-          example: "Password has been successfully reset. You can now log in."
+          example: "Password reset successfully"
+
+    SuccessMessageResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Operation completed successfully"
+
+    ProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        user:
+          $ref: "#/components/schemas/UserPublic"
+
+    UpdateProfileResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Profile updated successfully"
+        user:
+          $ref: "#/components/schemas/UserPublic"
+
+    UserStatsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        stats:
+          $ref: "#/components/schemas/UserStats"
+
+    CalibrationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        calibration:
+          type: object
+          properties:
+            _id:
+              $ref: "#/components/schemas/ObjectId"
+            userId:
+              $ref: "#/components/schemas/ObjectId"
+            bounds:
+              type: object
+              additionalProperties: true
+            preferences:
+              type: object
+              additionalProperties: true
+            updatedAt:
+              type: string
+              format: date-time
+
+    UpdateCalibrationResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Calibration settings updated successfully"
+        calibration:
+          type: object
+          properties:
+            _id:
+              $ref: "#/components/schemas/ObjectId"
+            userId:
+              $ref: "#/components/schemas/ObjectId"
+            bounds:
+              type: object
+              additionalProperties: true
+            preferences:
+              type: object
+              additionalProperties: true
+            updatedAt:
+              type: string
+              format: date-time
+
+    TopicsListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        topics:
+          type: array
+          items:
+            $ref: "#/components/schemas/Topic"
+
+    CreateTopicResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Topic created successfully"
+        topic:
+          $ref: "#/components/schemas/Topic"
+
+    UpdateTopicResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Topic updated successfully"
+        topic:
+          $ref: "#/components/schemas/Topic"
+
+    ToggleTopicActiveResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Topic is now active"
+        topic:
+          type: object
+          properties:
+            _id:
+              $ref: "#/components/schemas/ObjectId"
+            isActive:
+              type: boolean
+
+    TopicLessonsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        lessons:
+          type: array
+          items:
+            $ref: "#/components/schemas/LessonSummary"
+
+    LessonListItem:
+      allOf:
+        - $ref: "#/components/schemas/LessonSummary"
+        - type: object
+          properties:
+            progress:
+              $ref: "#/components/schemas/ProgressSummary"
+
+    LessonsListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        lessons:
+          type: array
+          items:
+            $ref: "#/components/schemas/LessonListItem"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+
+    LessonDetailResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        lesson:
+          $ref: "#/components/schemas/Lesson"
+        requiredBlocks:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomBlock"
+
+    CreateLessonResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Lesson created successfully"
+        lesson:
+          $ref: "#/components/schemas/Lesson"
+
+    UpdateLessonResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Lesson updated successfully"
+        lesson:
+          $ref: "#/components/schemas/Lesson"
+
+    ToggleLessonActiveResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Lesson is now active"
+        lesson:
+          type: object
+          properties:
+            _id:
+              $ref: "#/components/schemas/ObjectId"
+            isActive:
+              type: boolean
+
+    SaveProgressResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Workspace progress saved"
+        progress:
+          $ref: "#/components/schemas/UserProgress"
+
+    UserProgressResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        progress:
+          $ref: "#/components/schemas/UserProgress"
+
+    ProgressListItem:
+      type: object
+      properties:
+        _id:
+          $ref: "#/components/schemas/ObjectId"
+        userId:
+          $ref: "#/components/schemas/ObjectId"
+        lessonId:
+          $ref: "#/components/schemas/ObjectId"
+        status:
+          type: string
+          enum: [not_started, in_progress, completed, failed]
+        attemptsCount:
+          type: number
+        time:
+          type: number
+        points:
+          type: number
+        submittedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    ProgressListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        progress:
+          type: array
+          items:
+            $ref: "#/components/schemas/ProgressListItem"
 
     HintResponse:
       type: object
-      description: "Response containing the requested hint at the given index. Read-only — does not mutate UserProgress."
+      description: "Response containing the requested hint at the given index."
       properties:
+        success:
+          type: boolean
+          example: true
         hint:
           $ref: "#/components/schemas/Hint"
         index:
           type: integer
-          description: "The zero-based index of the returned hint"
           example: 0
 
-    MessageResponse:
+    ViewSolutionResponse:
       type: object
       properties:
+        success:
+          type: boolean
+          example: true
+        solution:
+          type: object
+          additionalProperties: true
+          description: "Serialized JSON of the solution workspace"
+
+    CustomBlocksListResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        blocks:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomBlock"
+
+    CustomBlockResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        block:
+          $ref: "#/components/schemas/CustomBlock"
+
+    CreateCustomBlockResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
         message:
           type: string
-          example: Success
+          example: "Custom block created successfully"
+        newBlock:
+          $ref: "#/components/schemas/CustomBlock"
+
+    UpdateCustomBlockResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: "Custom block updated successfully"
+        block:
+          $ref: "#/components/schemas/CustomBlock"
+
+    LeaderboardResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        leaderboard:
+          type: array
+          items:
+            $ref: "#/components/schemas/LeaderboardEntry"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
 
     ErrorResponse:
       type: object
@@ -1535,14 +2306,16 @@ components:
               description: "A human-readable error message."
               example: "The provided email is already in use."
             details:
-              type: array
-              description: "Optional array of field-level validation errors."
-              items:
-                type: object
-                properties:
-                  field:
-                    type: string
-                    example: "password"
-                  issue:
-                    type: string
-                    example: "Password must be at least 8 characters long."
+              description: "Optional extra error detail — string or array of field-level validation errors."
+              oneOf:
+                - type: string
+                - type: array
+                  items:
+                    type: object
+                    properties:
+                      field:
+                        type: string
+                        example: "password"
+                      issue:
+                        type: string
+                        example: "Password must be at least 8 characters long."
