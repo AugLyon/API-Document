@@ -78,6 +78,67 @@ paths:
         "401":
           $ref: "#/components/responses/Unauthorized"
 
+  /auth/face-login:
+    post:
+      tags: [Auth]
+      summary: Login with face embedding
+      operationId: faceLogin
+      description: |
+        Authenticates a user by comparing a face embedding from the client against stored embeddings.
+        The client scans the face, serializes the float vector as a JSON string, and sends it here.
+        On success, returns a JWT access token and sets a refresh token cookie (same as password login).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FaceLoginRequest"
+      responses:
+        "200":
+          description: Face login successful
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/embedding:
+    put:
+      tags: [Auth]
+      summary: Save face embedding for authenticated user
+      operationId: saveFaceEmbedding
+      description: |
+        Stores the user's face embedding on their account for future face-login.
+        Embedding must be a JSON string of float values, e.g. `"[0.12,-0.34,...]"`.
+        Also accepted optionally on PUT /users/calibration after calibration completes.
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SaveEmbeddingRequest"
+      responses:
+        "200":
+          description: Embedding saved
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: "Face embedding saved successfully"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
   /auth/logout:
     post:
       tags: [Auth]
@@ -120,6 +181,46 @@ paths:
                 $ref: "#/components/schemas/ResetPasswordResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+
+  /auth/refresh-token:
+    post:
+      tags: [Auth]
+      summary: Obtain a new access token
+      operationId: refreshToken
+      description: Obtain a new access token using the refreshToken HTTP-only cookie.
+      responses:
+        "200":
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /auth/forgot-password:
+    post:
+      tags: [Auth]
+      summary: Request a password reset
+      operationId: forgotPassword
+      description: Generate a signed password reset token and email a reset link.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ForgotPasswordRequest"
+      responses:
+        "200":
+          description: Password reset email sent
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForgotPasswordResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
 
   # ========================================
   # USERS & PROFILE
@@ -187,7 +288,7 @@ paths:
       tags: [Users]
       summary: Get user stats
       operationId: getStats
-      description: Retrieves aggregated stats for the user (total score, streak, lessons completed, level).
+      description: Retrieves aggregated stats for the user (total score, current streak, highest streak, lessons completed, level).
       security:
         - bearerAuth: []
       responses:
@@ -286,6 +387,104 @@ paths:
                 type: array
                 items:
                   $ref: "#/components/schemas/Lesson"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /topics:
+    post:
+      tags: [Topics]
+      summary: Create a new topic
+      operationId: createTopic
+      description: Creates a new topic. (Admin/Teacher only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateTopicRequest"
+      responses:
+        "201":
+          description: Topic created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Topic"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /topics/{topicId}:
+    put:
+      tags: [Topics]
+      summary: Update a topic
+      operationId: updateTopic
+      description: Updates an existing topic. (Admin/Teacher only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TopicId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateTopicRequest"
+      responses:
+        "200":
+          description: Topic updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Topic"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+    delete:
+      tags: [Topics]
+      summary: Delete a topic
+      operationId: deleteTopic
+      description: Deletes a topic and deactivates all of its lessons. (Admin/Teacher only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TopicId"
+      responses:
+        "200":
+          description: Topic deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MessageResponse"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /topics/{topicId}/toggle-active:
+    patch:
+      tags: [Topics]
+      summary: Toggle topic active status
+      operationId: toggleTopicActive
+      description: Toggles the visibility/active status of a topic. (Admin/Teacher only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/TopicId"
+      responses:
+        "200":
+          description: Topic active status toggled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Topic"
         "401":
           $ref: "#/components/responses/Unauthorized"
         "404":
@@ -722,6 +921,60 @@ paths:
           $ref: "#/components/responses/Unauthorized"
         "404":
           $ref: "#/components/responses/NotFound"
+    put:
+      tags: [Custom Blocks]
+      summary: Update a custom block
+      operationId: updateCustomBlock
+      description: Update an existing custom block. (Admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/BlockId"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateCustomBlockRequest"
+      responses:
+        "200":
+          description: Custom block updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomBlock"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /custom-blocks/create:
+    post:
+      tags: [Custom Blocks]
+      summary: Create a new custom block
+      operationId: createCustomBlock
+      description: Create a new custom block definition. (Admin only)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateCustomBlockRequest"
+      responses:
+        "201":
+          description: Custom block created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomBlock"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
 
   # ========================================
   # LEADERBOARD
@@ -860,6 +1113,16 @@ components:
           nullable: true
           description: "URL link to user profile picture"
           example: "https://enablecode.vn/avatars/user.jpg"
+        embedding:
+          type: string
+          writeOnly: true
+          description: "Face recognition embedding as JSON string of floats. Never returned in API responses."
+          example: "[0.12,-0.34,0.56]"
+        hasFaceEmbedding:
+          type: boolean
+          readOnly: true
+          description: "Whether the user has enrolled face login (profile response only)"
+          example: true
         totalScore:
           type: number
           default: 0
@@ -873,8 +1136,13 @@ components:
         streak:
           type: number
           default: 0
-          description: "Consecutive daily login and coding streak"
+          description: "Current consecutive-day lesson streak (first-time lesson completion per Vietnam calendar day)"
           example: 3
+        highestStreak:
+          type: number
+          default: 0
+          description: "All-time highest streak ever reached"
+          example: 5
         level:
           type: number
           default: 0
@@ -891,7 +1159,7 @@ components:
           type: string
           format: date-time
           nullable: true
-          description: "Timestamp of the user's last interaction"
+          description: "Timestamp of the user's last streak-qualifying lesson completion"
         createdAt:
           type: string
           format: date-time
@@ -913,8 +1181,12 @@ components:
           example: 5
         streak:
           type: number
-          description: "Number of consecutive days the user has been active"
+          description: "Current consecutive-day lesson streak (Asia/Ho_Chi_Minh)"
           example: 3
+        highestStreak:
+          type: number
+          description: "All-time highest streak ever reached"
+          example: 5
         level:
           type: number
           description: "Current gamified level of the user based on XP"
@@ -1176,6 +1448,14 @@ components:
           type: number
           description: "Total lessons passed"
           example: 12
+        streak:
+          type: number
+          description: "Current consecutive-day lesson streak"
+          example: 3
+        highestStreak:
+          type: number
+          description: "All-time highest streak ever reached"
+          example: 5
 
     Hint:
       type: object
@@ -1260,6 +1540,26 @@ components:
           format: password
           example: "P@ssw0rd123"
 
+    FaceLoginRequest:
+      type: object
+      description: "Face embedding payload for passwordless login."
+      required: [embedding]
+      properties:
+        embedding:
+          type: string
+          description: "JSON string of face embedding floats, e.g. \"[0.12,-0.34,0.56]\""
+          example: "[0.12,-0.34,0.56,0.78]"
+
+    SaveEmbeddingRequest:
+      type: object
+      description: "Payload to enroll or update the user's face embedding."
+      required: [embedding]
+      properties:
+        embedding:
+          type: string
+          description: "JSON string of face embedding floats"
+          example: "[0.12,-0.34,0.56,0.78]"
+
     ForgotPasswordRequest:
       type: object
       description: "Payload to request a password reset email."
@@ -1298,6 +1598,58 @@ components:
           nullable: true
           example: "https://enablecode.vn/avatars/user_new.jpg"
 
+    CreateTopicRequest:
+      type: object
+      description: "Payload for teachers/admins to author a new topic."
+      required: [title]
+      properties:
+        title:
+          type: string
+          example: "Introduction to Python"
+        description:
+          type: string
+        difficulty:
+          oneOf:
+            - type: string
+            - type: number
+            - type: object
+          default: medium
+        relevantTopicIds:
+          type: array
+          items:
+            $ref: "#/components/schemas/ObjectId"
+          default: []
+        isActive:
+          type: boolean
+          default: true
+
+    UpdateTopicRequest:
+      allOf:
+        - $ref: "#/components/schemas/CreateTopicRequest"
+      description: Same fields as CreateTopicRequest, but all fields are optional at controller level.
+
+    CreateCustomBlockRequest:
+      type: object
+      description: "Payload for admins to author a new custom block."
+      required: [blockType, definition]
+      properties:
+        blockType:
+          type: string
+          example: "enablecode_move_forward"
+        definition:
+          type: object
+          additionalProperties: true
+        generatorCode:
+          type: string
+        category:
+          type: string
+          example: "Movement"
+
+    UpdateCustomBlockRequest:
+      allOf:
+        - $ref: "#/components/schemas/CreateCustomBlockRequest"
+      description: Same fields as CreateCustomBlockRequest, but all fields are optional at controller level.
+
     UpdateCalibrationRequest:
       type: object
       description: "Payload sent from the React + AI frontend containing calculated MediaPipe bounds."
@@ -1329,6 +1681,10 @@ components:
             trackingSensitivity:
               type: number
               example: 1.0
+        embedding:
+          type: string
+          description: "Optional face embedding JSON string saved to User on calibration complete"
+          example: "[0.12,-0.34,0.56,0.78]"
 
     CreateLessonRequest:
       type: object
@@ -1442,6 +1798,22 @@ components:
           items:
             type: object
             additionalProperties: true
+        streak:
+          type: object
+          description: "Streak update after a qualifying first-time lesson completion"
+          properties:
+            current:
+              type: number
+              description: "Current streak after submission"
+              example: 3
+            highest:
+              type: number
+              description: "All-time highest streak"
+              example: 5
+            increased:
+              type: boolean
+              description: "Whether the streak was incremented on this submission"
+              example: true
 
     SaveProgressRequest:
       type: object
